@@ -1,0 +1,16 @@
+**/.git
+**/.gitignore
+**/.env
+**/.env.local
+**/node_modules
+**/.expo
+**/.next
+**/dist
+**/build
+**/.vscode
+**/.idea
+**/yarn.lock
+**/package-lock.json
+**/npm-debug.log*
+**/.DS_Store
+**/Thumbs.db

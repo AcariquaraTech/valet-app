@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "APP Valet",
+    "slug": "app-valet",
+    "version": "1.0.0",
+    "platforms": [
+      "android"
+    ],
+    "android": {
+      "package": "com.valet.app"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "565563d3-084a-4f94-848f-3b8513866ecb"
+      }
+    }
+  }
+}

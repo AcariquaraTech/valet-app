@@ -1,0 +1,109 @@
+// Prisma Schema - APP VALET (SQLite Compatible)
+// Simplified version for quick start
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Users (Admin, Operators, Clients)
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  phone     String?
+  role      String   // 'admin', 'operator', 'client'
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vehicles       Vehicle[]      @relation("ClientVehicles")
+  vehicleEntries VehicleEntry[] @relation("OperatorEntries")
+  
+  @@map("users")
+}
+
+// Vehicles
+model Vehicle {
+  id        String   @id @default(uuid())
+  plate     String   @unique
+  model     String?
+  color     String?
+  year      Int?
+  clientId  String
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  client  User           @relation("ClientVehicles", fields: [clientId], references: [id])
+  entries VehicleEntry[]
+  
+  @@map("vehicles")
+}
+
+// Vehicle Entries and Exits
+model VehicleEntry {
+  id            String    @id @default(uuid())
+  vehicleId     String
+  operatorId    String
+  entryTime     DateTime  @default(now())
+  exitTime      DateTime?
+  spotNumber    String?
+  observations  String?
+  totalPrice    Float?
+  status        String    @default("parked") // 'parked', 'retrieved', 'cancelled'
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id])
+  operator  User    @relation("OperatorEntries", fields: [operatorId], references: [id])
+  
+  @@map("vehicle_entries")
+}
+
+// SMS Notifications
+model SmsNotification {
+  id          String   @id @default(uuid())
+  phoneNumber String
+  message     String
+  status      String   @default("pending") // 'pending', 'sent', 'failed'
+  provider    String?
+  providerId  String?
+  sentAt      DateTime?
+  createdAt   DateTime @default(now())
+  
+  @@map("sms_notifications")
+}
+
+// OCR Scans
+model OcrScan {
+  id         String   @id @default(uuid())
+  vehicleId  String?
+  plate      String
+  confidence Float
+  rawText    String?
+  imagePath  String?
+  success    Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  
+  @@map("ocr_scans")
+}
+
+// System Logs
+model SystemLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  entity    String?
+  entityId  String?
+  details   String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+  
+  @@map("system_logs")
+}

@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "APP Valet",
+    "slug": "app-valet",
+    "version": "1.0.0",
+    "platforms": ["android"],
+    "android": {
+      "package": "com.valet.app"
+    }
+  }
+}
