@@ -1,21 +1,22 @@
+
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma.js';
 
-// Register new user
+// Register new user (by nickname)
 export const register = async (req, res) => {
   try {
-    const { name, email, password, phone, role = 'operator' } = req.body;
+    const { name, nickname, password, phone, role = 'operator' } = req.body;
 
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
-      where: { email },
+      where: { nickname },
     });
 
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: 'Usuário já existe com este email',
+        message: 'Usuário já existe com este nome de usuário',
       });
     }
 
@@ -26,7 +27,7 @@ export const register = async (req, res) => {
     const user = await prisma.user.create({
       data: {
         name,
-        email,
+        nickname,
         password: hashedPassword,
         phone,
         role,
@@ -35,7 +36,7 @@ export const register = async (req, res) => {
 
     // Generate JWT
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, nickname: user.nickname, role: user.role },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
@@ -47,7 +48,7 @@ export const register = async (req, res) => {
         user: {
           id: user.id,
           name: user.name,
-          email: user.email,
+          nickname: user.nickname,
           role: user.role,
         },
         token,
@@ -63,14 +64,15 @@ export const register = async (req, res) => {
   }
 };
 
-// Login
+// Login (by nickname)
 export const login = async (req, res) => {
+    console.log('REQ.BODY LOGIN:', req.body);
   try {
-    const { email, password } = req.body;
+    const { nickname, password } = req.body;
 
     // Find user
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { nickname },
     });
 
     if (!user) {
@@ -100,7 +102,7 @@ export const login = async (req, res) => {
 
     // Generate JWT
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, nickname: user.nickname, role: user.role },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
@@ -112,7 +114,7 @@ export const login = async (req, res) => {
         user: {
           id: user.id,
           name: user.name,
-          email: user.email,
+          nickname: user.nickname,
           role: user.role,
         },
         token,
@@ -136,7 +138,7 @@ export const me = async (req, res) => {
       select: {
         id: true,
         name: true,
-        email: true,
+        nickname: true,
         phone: true,
         role: true,
         active: true,

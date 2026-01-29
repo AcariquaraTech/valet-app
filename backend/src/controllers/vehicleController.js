@@ -41,7 +41,7 @@ export const registerEntry = async (req, res) => {
           select: {
             id: true,
             name: true,
-            email: true,
+            nickname: true,
           },
         },
       },
@@ -115,6 +115,16 @@ export const registerExit = async (req, res) => {
         },
       },
     });
+
+    // Enviar SMS para o cliente na saída, se houver telefone
+    const clientPhone = updatedEntry.vehicle?.clientPhone || updatedEntry.vehicle?.client_phone || null;
+    const plate = updatedEntry.vehicle?.plate;
+    if (clientPhone) {
+      await sendSMS(
+        clientPhone,
+        `Seu veículo placa ${plate} saiu do estacionamento às ${new Date().toLocaleTimeString('pt-BR')}`
+      );
+    }
 
     res.json({
       success: true,

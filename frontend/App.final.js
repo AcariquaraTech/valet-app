@@ -33,10 +33,10 @@ export default function App() {
         <View style={styles.screen}>
           <Text style={styles.title}>Login</Text>
           <View style={styles.infoBox}>
-            <Text style={styles.label}>Email:</Text>
-            <Text style={styles.value}>admin@valet.com</Text>
+            <Text style={styles.label}>Nickname:</Text>
+            <Text style={styles.value}>admin</Text>
             <Text style={styles.label}>Senha:</Text>
-            <Text style={styles.value}>senha123</Text>
+            <Text style={styles.value}>admin</Text>
           </View>
           <TouchableOpacity 
             style={styles.button}

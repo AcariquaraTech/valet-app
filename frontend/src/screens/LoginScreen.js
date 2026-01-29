@@ -1,25 +1,27 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert, Text, TextInput } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, Text, TouchableOpacity } from 'react-native';
+import { TextInput } from '../components/Common';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../store/AuthContext';
 import { Button, Card } from '../components/Common';
 
 const LoginScreen = ({ navigation }) => {
-  const [email, setEmail] = useState('admin@valet.com');
-  const [password, setPassword] = useState('password123');
+  const [nickname, setNickname] = useState('admin');
+  const [password, setPassword] = useState('');
   const [accessKeyCode, setAccessKeyCode] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const { login } = useAuth();
 
   const handleLogin = async () => {
-    if (!email || !password || !accessKeyCode) {
+    if (!nickname || !password || !accessKeyCode) {
       Alert.alert('Erro', 'Preencha todos os campos');
       return;
     }
-
     try {
       setLoading(true);
-      await login(email, password, accessKeyCode);
+      await login(nickname, password, accessKeyCode);
     } catch (error) {
       Alert.alert('Erro de Login', error.response?.data?.error || 'Erro ao fazer login');
     } finally {
@@ -37,13 +39,11 @@ const LoginScreen = ({ navigation }) => {
 
         <Card>
           <TextInput
-            placeholder="Email"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
+            placeholder="Usuário"
+            value={nickname}
+            onChangeText={setNickname}
             autoCapitalize="none"
             editable={!loading}
-            style={styles.input}
           />
         </Card>
 
@@ -52,10 +52,18 @@ const LoginScreen = ({ navigation }) => {
             placeholder="Senha"
             value={password}
             onChangeText={setPassword}
-            secureTextEntry
+            secureTextEntry={!showPassword}
             editable={!loading}
-            style={styles.input}
-          />
+            autoCapitalize="none"
+          >
+            <TouchableOpacity onPress={() => setShowPassword((v) => !v)} style={{ marginLeft: 8, padding: 4 }}>
+              <Icon
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={24}
+                color="#888"
+              />
+            </TouchableOpacity>
+          </TextInput>
         </Card>
 
         <Card>
@@ -63,9 +71,8 @@ const LoginScreen = ({ navigation }) => {
             placeholder="Código da Chave de Acesso"
             value={accessKeyCode}
             onChangeText={setAccessKeyCode}
-            autoCapitalize="upper"
+            autoCapitalize="characters"
             editable={!loading}
-            style={styles.input}
           />
         </Card>
 

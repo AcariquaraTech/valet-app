@@ -42,22 +42,26 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (email, password, accessKeyCode) => {
+  const login = async (nickname, password, accessKeyCode) => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const response = await authService.login(email, password, accessKeyCode);
+      const response = await authService.login(nickname, password, accessKeyCode);
+      // Compatível com backend: response.data.token, response.data.user, response.data.company
+      const token = response?.data?.token || response?.token;
+      const user = response?.data?.user || response?.user;
+      const company = response?.data?.company || response?.company;
 
-      await AsyncStorage.setItem('authToken', response.token);
-      await AsyncStorage.setItem('user', JSON.stringify(response.user));
-      await AsyncStorage.setItem('company', JSON.stringify(response.company));
+      await AsyncStorage.setItem('authToken', token);
+      await AsyncStorage.setItem('user', JSON.stringify(user));
+      await AsyncStorage.setItem('company', JSON.stringify(company));
 
-      setToken(response.token);
-      setUser(response.user);
-      setCompany(response.company);
+      setToken(token);
+      setUser(user);
+      setCompany(company);
 
-      return response;
+      return { token, user, company };
     } catch (err) {
       const errorMessage = err.response?.data?.error || 'Erro ao fazer login';
       setError(errorMessage);

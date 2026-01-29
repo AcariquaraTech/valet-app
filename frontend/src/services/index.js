@@ -1,9 +1,10 @@
 import apiClient from './apiClient';
 
 export const authService = {
-  login: async (email, password, accessKeyCode) => {
+  login: async (nickname, password, accessKeyCode) => {
+    // Garante que está enviando nickname e não email
     const response = await apiClient.post('/auth/login', {
-      email,
+      nickname,
       password,
       accessKeyCode,
     });
@@ -22,14 +23,13 @@ export const authService = {
 };
 
 export const vehicleService = {
-  registerEntry: async (plate, vehicleType, color, clientName, clientPhone, clientEmail, notes) => {
+  registerEntry: async (plate, vehicleType, color, clientName, clientPhone, notes) => {
     const response = await apiClient.post('/vehicles/entry', {
       plate,
       vehicle_type: vehicleType,
       color,
       client_name: clientName,
       client_phone: clientPhone,
-      client_email: clientEmail,
       notes,
     });
     return response.data;
@@ -122,10 +122,10 @@ export const userService = {
     return response.data;
   },
 
-  createUser: async (name, email, password, role, accessKeyId) => {
+  createUser: async (name, nickname, password, role, accessKeyId) => {
     const response = await apiClient.post('/users', {
       name,
-      email,
+      nickname,
       password,
       role,
       access_key_id: accessKeyId,

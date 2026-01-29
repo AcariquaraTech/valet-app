@@ -3,12 +3,37 @@
     "name": "APP Valet",
     "slug": "app-valet",
     "version": "1.0.0",
+    "scheme": "appvalet",
     "platforms": [
-      "android"
+      "ios",
+      "android",
+      "web"
     ],
-    "android": {
-      "package": "com.valet.app"
+    "ios": {
+      "supportsTabletMode": true,
+      "bundleIdentifier": "com.valet.app",
+      "requireFullScreen": true
     },
+    "android": {
+      "package": "com.valet.app",
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "SEND_SMS",
+        "READ_SMS",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ],
+      "useNextNotificationFormat": true
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "userInterfaceStyle": "light",
     "extra": {
       "eas": {
         "projectId": "565563d3-084a-4f94-848f-3b8513866ecb"

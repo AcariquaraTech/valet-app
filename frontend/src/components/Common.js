@@ -26,17 +26,24 @@ export const Card = ({ children, style }) => {
   return <View style={[styles.card, style]}>{children}</View>;
 };
 
-export const TextInput = ({ placeholder, value, onChangeText, secureTextEntry, ...props }) => {
+import { TextInput as RNTextInput } from 'react-native';
+export const TextInput = ({ placeholder, value, onChangeText, secureTextEntry, style, children, ...props }) => {
   return (
     <View style={styles.inputContainer}>
-      <Text style={styles.inputPlaceholder}>{placeholder}</Text>
-      <View
-        style={[
-          styles.input,
-          props.style,
-        ]}
-      >
-        <Text>{value}</Text>
+      {placeholder && <Text style={styles.inputPlaceholder}>{placeholder}</Text>}
+      <View style={[styles.input, { flexDirection: 'row', alignItems: 'center', paddingRight: 8 }, style]}>
+        <RNTextInput
+          value={value}
+          onChangeText={onChangeText}
+          secureTextEntry={secureTextEntry}
+          style={{ flex: 1, fontSize: 16, padding: 0, color: '#222', minWidth: 0 }}
+          placeholder={placeholder}
+          placeholderTextColor="#aaa"
+          {...props}
+        />
+        {children && (
+          <View style={{ marginLeft: 4, zIndex: 2 }}>{children}</View>
+        )}
       </View>
     </View>
   );

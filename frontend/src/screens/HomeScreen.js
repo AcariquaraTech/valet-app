@@ -1,7 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert, Text, TextInput, FlatList, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, Text, TextInput, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useAuth } from '../store/AuthContext';
+import { usePayment } from '../store/PaymentContext';
 import { vehicleService } from '../services';
+import { openSmsApp } from '../services/smsHelper';
 import { Button, Card } from '../components/Common';
 
 const HomeScreen = ({ navigation }) => {
@@ -11,7 +14,19 @@ const HomeScreen = ({ navigation }) => {
   const [parkedVehicles, setParkedVehicles] = useState([]);
   const [loading, setLoading] = useState(false);
 
+
   const { user, company } = useAuth();
+  const { mode, hourValue, dayValue, saveSettings, loading: paymentLoading } = usePayment();
+  const [editMode, setEditMode] = useState(false);
+  const [localMode, setLocalMode] = useState(mode);
+  const [localHour, setLocalHour] = useState(hourValue);
+  const [localDay, setLocalDay] = useState(dayValue);
+
+  useEffect(() => {
+    setLocalMode(mode);
+    setLocalHour(hourValue);
+    setLocalDay(dayValue);
+  }, [mode, hourValue, dayValue]);
 
   useEffect(() => {
     loadParkedVehicles();
@@ -45,6 +60,12 @@ const HomeScreen = ({ navigation }) => {
         clientPhone,
         ''
       );
+      // Envio automático de SMS na entrada
+      if (clientPhone) {
+        const message = `Seu veículo placa ${plate.toUpperCase()} entrou no estacionamento às ${new Date().toLocaleTimeString('pt-BR')}`;
+        console.log('Chamando openSmsApp para entrada:', clientPhone, message);
+        openSmsApp(clientPhone, message);
+      }
       Alert.alert('Sucesso', 'Entrada registrada com sucesso');
       setPlate('');
       setClientName('');
@@ -60,7 +81,16 @@ const HomeScreen = ({ navigation }) => {
   const handleRegisterExit = async (vehicleId) => {
     try {
       setLoading(true);
+      // Buscar dados do veículo para pegar telefone e placa
+      const details = await vehicleService.getVehicleDetails(vehicleId);
+      const { plate, client_phone } = details.data || {};
       await vehicleService.registerExit(vehicleId);
+      // Envio automático de SMS na saída
+      if (client_phone) {
+        const message = `Seu veículo placa ${plate} saiu do estacionamento às ${new Date().toLocaleTimeString('pt-BR')}`;
+        console.log('Chamando openSmsApp para saída:', client_phone, message);
+        openSmsApp(client_phone, message);
+      }
       Alert.alert('Sucesso', 'Saída registrada com sucesso');
       loadParkedVehicles();
     } catch (error) {
@@ -78,10 +108,87 @@ const HomeScreen = ({ navigation }) => {
       </View>
 
       <View style={styles.content}>
+        {/* Configuração de Pagamento */}
+        <Card>
+          <Text style={styles.sectionTitle}>Modo de Pagamento</Text>
+          {paymentLoading ? (
+            <ActivityIndicator size="small" color="#007AFF" />
+          ) : editMode ? (
+            <>
+              <View style={{ flexDirection: 'row', marginBottom: 10 }}>
+                <TouchableOpacity
+                  style={[styles.modeButton, localMode === 'pago' && styles.modeButtonActive]}
+                  onPress={() => setLocalMode('pago')}
+                >
+                  <Text style={[styles.modeButtonText, localMode === 'pago' && styles.modeButtonTextActive]}>💳 Pago</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modeButton, localMode === 'gratuito' && styles.modeButtonActive]}
+                  onPress={() => setLocalMode('gratuito')}
+                >
+                  <Text style={[styles.modeButtonText, localMode === 'gratuito' && styles.modeButtonTextActive]}>🆓 Gratuito</Text>
+                </TouchableOpacity>
+              </View>
+              {localMode === 'pago' && (
+                <>
+                  <Text style={styles.label}>Valor por Hora (R$)</Text>
+                  <TextInput
+                    style={styles.input}
+                    keyboardType="decimal-pad"
+                    value={localHour}
+                    onChangeText={setLocalHour}
+                  />
+                  <Text style={styles.label}>Valor por Dia (R$)</Text>
+                  <TextInput
+                    style={styles.input}
+                    keyboardType="decimal-pad"
+                    value={localDay}
+                    onChangeText={setLocalDay}
+                  />
+                </>
+              )}
+              <View style={{ flexDirection: 'row', marginTop: 10 }}>
+                <Button
+                  title="Salvar"
+                  onPress={async () => {
+                    await saveSettings(localMode, localHour, localDay);
+                    setEditMode(false);
+                  }}
+                  style={{ flex: 1, marginRight: 8 }}
+                />
+                <Button
+                  title="Cancelar"
+                  onPress={() => {
+                    setLocalMode(mode);
+                    setLocalHour(hourValue);
+                    setLocalDay(dayValue);
+                    setEditMode(false);
+                  }}
+                  style={{ flex: 1 }}
+                  variant="secondary"
+                />
+              </View>
+            </>
+          ) : (
+            <>
+              <Text style={styles.infoText}>
+                {mode === 'pago'
+                  ? `💳 Modo PAGO (R$/hora: ${hourValue}, R$/dia: ${dayValue})`
+                  : '🆓 Modo GRATUITO'}
+              </Text>
+              <Button
+                title="Alterar Configuração"
+                onPress={() => setEditMode(true)}
+                style={{ marginTop: 10 }}
+                variant="secondary"
+              />
+            </>
+          )}
+        </Card>
+
         {/* Entrada de Veículo */}
         <Card>
           <Text style={styles.sectionTitle}>Entrada de Veículo</Text>
-          
           <TextInput
             placeholder="Placa (ABC-1234)"
             value={plate}
@@ -90,7 +197,6 @@ const HomeScreen = ({ navigation }) => {
             editable={!loading}
             style={styles.input}
           />
-
           <TextInput
             placeholder="Nome do Cliente (opcional)"
             value={clientName}
@@ -98,7 +204,6 @@ const HomeScreen = ({ navigation }) => {
             editable={!loading}
             style={styles.input}
           />
-
           <TextInput
             placeholder="Telefone (opcional)"
             value={clientPhone}
@@ -107,7 +212,6 @@ const HomeScreen = ({ navigation }) => {
             editable={!loading}
             style={styles.input}
           />
-
           <Button
             title="Registrar Entrada"
             onPress={handleRegisterEntry}
@@ -120,7 +224,6 @@ const HomeScreen = ({ navigation }) => {
           <Text style={styles.sectionTitle}>
             Veículos Estacionados ({parkedVehicles.length})
           </Text>
-
           {parkedVehicles.length === 0 ? (
             <Text style={styles.emptyText}>Nenhum veículo estacionado</Text>
           ) : (
@@ -182,6 +285,39 @@ const HomeScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+    modeButton: {
+      flex: 1,
+      backgroundColor: '#eee',
+      padding: 10,
+      borderRadius: 8,
+      marginRight: 8,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: '#ccc',
+    },
+    modeButtonActive: {
+      backgroundColor: '#007AFF',
+      borderColor: '#007AFF',
+    },
+    modeButtonText: {
+      color: '#007AFF',
+      fontWeight: 'bold',
+    },
+    modeButtonTextActive: {
+      color: '#fff',
+    },
+    infoText: {
+      fontSize: 16,
+      color: '#007AFF',
+      marginBottom: 10,
+      textAlign: 'center',
+    },
+    label: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: '#666',
+      marginTop: 10,
+    },
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',

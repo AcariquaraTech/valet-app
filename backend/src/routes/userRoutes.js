@@ -14,7 +14,7 @@ router.get('/', authorize('admin'), async (req, res) => {
         {
           id: 'user-1',
           name: 'João Silva',
-          email: 'joao@email.com',
+          nickname: 'joaosilva',
           role: 'admin',
           status: 'active',
           last_login_at: new Date().toISOString(),
@@ -36,11 +36,12 @@ router.get('/', authorize('admin'), async (req, res) => {
 // POST /api/users
 router.post('/', authorize('admin'), async (req, res) => {
   try {
-    const { name, email, password, role, access_key_id } = req.body;
 
-    if (!name || !email || !password || !access_key_id) {
+    const { name, nickname, password, role, access_key_id } = req.body;
+
+    if (!name || !nickname || !password || !access_key_id) {
       return res.status(400).json({
-        error: 'Nome, email, senha e chave de acesso são obrigatórios',
+        error: 'Nome, nome de usuário, senha e chave de acesso são obrigatórios',
         code: 'MISSING_FIELDS',
       });
     }
@@ -48,7 +49,7 @@ router.post('/', authorize('admin'), async (req, res) => {
     res.status(201).json({
       id: 'user-new',
       name,
-      email,
+      nickname,
       role: role || 'operator',
     });
   } catch (error) {

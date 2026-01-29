@@ -6,10 +6,6 @@ export const validatePlate = (plate) => {
   return oldFormat.test(plate) || newFormat.test(plate.replace('-', ''));
 };
 
-export const validateEmail = (email) => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
 
 export const validatePhoneNumber = (phone) => {
   // Remove caracteres especiais
