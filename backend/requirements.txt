@@ -1,0 +1,7 @@
+# Requisitos do backend Node.js para o APP Valet
+# Use este arquivo apenas como referência para dependências Python equivalentes, se for rodar scripts auxiliares em Python.
+# O backend principal é Node.js, não Python.
+
+# Dependências equivalentes (caso precise rodar scripts Python auxiliares):
+requests
+python-dotenv
