@@ -153,6 +153,15 @@ android {
 
     // applicationVariants are e.g. debug, release
     // Removido bloco de versionCodeOverride por arquitetura (OutputFile obsoleto)
+
+    // Garante que as fontes dos ícones estejam no APK
+    packagingOptions {
+        pickFirsts += [
+            "**/assets/fonts/MaterialCommunityIcons.ttf",
+            "**/assets/fonts/MaterialIcons.ttf",
+            "**/assets/fonts/Ionicons.ttf"
+        ]
+    }
 }
 
 // Apply static values from `gradle.properties` to the `android.packagingOptions`
