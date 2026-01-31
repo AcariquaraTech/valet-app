@@ -1,7 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert, Text, TextInput, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { View, StyleSheet, ScrollView, Alert, Text, TextInput, FlatList, TouchableOpacity, ActivityIndicator, AppState } from 'react-native';
+  // Forçar recarregamento ao voltar do background
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && reloadPaymentSettings) reloadPaymentSettings();
+    });
+    return () => subscription.remove();
+  }, [reloadPaymentSettings]);
 import { useAuth } from '../store/AuthContext';
+import apiClient from '../services/apiClient';
 import { usePayment } from '../store/PaymentContext';
 import { vehicleService } from '../services';
 import { openSmsApp } from '../services/smsHelper';
@@ -15,18 +24,48 @@ const HomeScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
 
 
-  const { user, company } = useAuth();
-  const { mode, hourValue, dayValue, saveSettings, loading: paymentLoading } = usePayment();
+  const { user, company, forceInvalidToken, token } = useAuth();
+
+  // Não renderiza nada se não estiver autenticado (evita mostrar erro após logout)
+  if (!token || !user) {
+    return null;
+  }
+      // Se perder o token (logout global), redireciona para LoginScreen
+      useEffect(() => {
+        if (!token) {
+          navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+        }
+      }, [token]);
+    // Função para testar rejeição automática de token inválido
+    const testInvalidToken = async () => {
+      await forceInvalidToken();
+      try {
+        // Tenta acessar um endpoint protegido (ex: /user/me)
+        await apiClient.get('/user/me');
+        Alert.alert('Falha', 'Token inválido NÃO foi rejeitado!');
+      } catch (err) {
+        Alert.alert('Sucesso', 'Token inválido rejeitado e usuário deslogado!');
+      }
+    };
+  const { mode, hourValue, dayValue, saveSettings, loading: paymentLoading, saving: paymentSaving, reloadPaymentSettings } = usePayment();
   const [editMode, setEditMode] = useState(false);
   const [localMode, setLocalMode] = useState(mode);
   const [localHour, setLocalHour] = useState(hourValue);
   const [localDay, setLocalDay] = useState(dayValue);
+
 
   useEffect(() => {
     setLocalMode(mode);
     setLocalHour(hourValue);
     setLocalDay(dayValue);
   }, [mode, hourValue, dayValue]);
+
+  // Sempre que a HomeScreen ganhar foco, recarrega configs do AsyncStorage
+  useFocusEffect(
+    React.useCallback(() => {
+      if (reloadPaymentSettings) reloadPaymentSettings();
+    }, [reloadPaymentSettings])
+  );
 
   useEffect(() => {
     loadParkedVehicles();
@@ -149,11 +188,13 @@ const HomeScreen = ({ navigation }) => {
               )}
               <View style={{ flexDirection: 'row', marginTop: 10 }}>
                 <Button
-                  title="Salvar"
+                  title={paymentSaving ? "Salvando..." : "Salvar"}
                   onPress={async () => {
                     await saveSettings(localMode, localHour, localDay);
                     setEditMode(false);
                   }}
+                  loading={paymentSaving}
+                  disabled={paymentSaving}
                   style={{ flex: 1, marginRight: 8 }}
                 />
                 <Button
@@ -185,6 +226,18 @@ const HomeScreen = ({ navigation }) => {
             </>
           )}
         </Card>
+
+        {/* Botão de teste de token inválido (apenas em dev) */}
+        {__DEV__ && (
+          <Card>
+            <Button
+              title="Testar token inválido"
+              onPress={testInvalidToken}
+              variant="secondary"
+              style={{ marginTop: 10 }}
+            />
+          </Card>
+        )}
 
         {/* Entrada de Veículo */}
         <Card>

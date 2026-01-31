@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { setGlobalLogout } from '../services/apiClient';
+import { navigationRef } from '../../App';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authService } from '../services';
+import { usePayment } from './PaymentContext';
 
 const AuthContext = createContext();
 
@@ -19,6 +22,29 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Permite atualização do token/usuário a partir de fora (ex: interceptor)
+  const setTokenAndUser = async (newToken, newUser, newCompany) => {
+    setToken(newToken);
+    setUser(newUser);
+    setCompany(newCompany);
+    if (newToken) await AsyncStorage.setItem('authToken', newToken);
+    if (newUser) await AsyncStorage.setItem('user', JSON.stringify(newUser));
+    if (newCompany) await AsyncStorage.setItem('company', JSON.stringify(newCompany));
+  };
+
+  // Força um token inválido para teste automatizado
+  const forceInvalidToken = async () => {
+    const invalidToken = 'INVALID_TOKEN_TESTE';
+    await AsyncStorage.setItem('authToken', invalidToken);
+    setToken(invalidToken);
+  };
+  // O hook usePayment só pode ser chamado dentro do PaymentProvider
+  const payment = usePayment();
+
+  // Ao montar, registra função global de logout para interceptador
+  useEffect(() => {
+    setGlobalLogout(logout);
+  }, []);
   // Verificar token ao iniciar
   useEffect(() => {
     bootstrapAsync();
@@ -61,6 +87,11 @@ export const AuthProvider = ({ children }) => {
       setUser(user);
       setCompany(company);
 
+      // Após login, recarregar configs de pagamento do AsyncStorage
+      if (payment && payment.reloadPaymentSettings) {
+        await payment.reloadPaymentSettings();
+      }
+
       return { token, user, company };
     } catch (err) {
       const errorMessage = err.response?.data?.error || 'Erro ao fazer login';
@@ -83,6 +114,13 @@ export const AuthProvider = ({ children }) => {
       setToken(null);
       setUser(null);
       setCompany(null);
+      // Redireciona para tela de login se possível
+      if (navigationRef.isReady()) {
+        navigationRef.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        });
+      }
     } catch (err) {
       console.error('Erro ao fazer logout:', err);
     } finally {
@@ -99,6 +137,8 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     isSignedIn: !!token,
+    setTokenAndUser, // expõe função para atualização externa
+    forceInvalidToken, // expõe função de teste
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -4,18 +4,20 @@ export const authenticateToken = (req, res, next) => {
   try {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-
+    console.log('[MIDDLEWARE] Authorization header:', authHeader);
     if (!token) {
+      console.log('[MIDDLEWARE] Token não fornecido');
       return res.status(401).json({
         error: 'Token não fornecido',
         code: 'MISSING_TOKEN',
       });
     }
-
     const decoded = verifyToken(token);
+    console.log('[MIDDLEWARE] Token decodificado:', decoded);
     req.user = decoded;
     next();
   } catch (error) {
+    console.log('[MIDDLEWARE] Token inválido ou expirado:', error.message);
     return res.status(401).json({
       error: 'Token inválido ou expirado',
       code: 'INVALID_TOKEN',

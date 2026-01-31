@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import config from '../config/index.js';
 
 export const generateToken = (userId, companyId, accessKeyId, role) => {
-  return jwt.sign(
+  const token = jwt.sign(
     {
       userId,
       companyId,
@@ -14,12 +14,17 @@ export const generateToken = (userId, companyId, accessKeyId, role) => {
       expiresIn: config.jwt.expiry,
     }
   );
+  console.log('[JWT] Token gerado (generateToken):', token);
+  return token;
 };
 
 export const verifyToken = (token) => {
   try {
-    return jwt.verify(token, config.jwt.secret);
+    const decoded = jwt.verify(token, config.jwt.secret);
+    console.log('[JWT] Token verificado com sucesso:', decoded);
+    return decoded;
   } catch (error) {
+    console.log('[JWT] Erro ao verificar token:', error.message);
     throw new Error('Token inválido ou expirado');
   }
 };

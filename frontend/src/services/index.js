@@ -12,7 +12,12 @@ export const authService = {
   },
 
   refreshToken: async (token) => {
-    const response = await apiClient.post('/auth/refresh', { token });
+    // Envia o token no header Authorization, igual às outras rotas
+    const response = await apiClient.post('/auth/refreshToken', {}, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
     return response.data;
   },
 
