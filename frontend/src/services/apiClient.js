@@ -6,7 +6,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 let globalLogout = null;
 export const setGlobalLogout = (fn) => { globalLogout = fn; };
 
-const API_URL = 'http://192.168.0.5:3000/api';
+// Use IP direto para conexão via ADB port forwarding
+const API_URL = 'http://127.0.0.1:3000/api';
 
 const apiClient = axios.create({
   baseURL: API_URL,
@@ -56,8 +57,17 @@ const processQueue = (error, token = null) => {
 };
 
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('[apiClient] Sucesso:', response.config.url, response.status);
+    return response;
+  },
   async (error) => {
+    console.log('[apiClient] Erro na requisição:', {
+      url: error.config?.url,
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message,
+    });
     const originalRequest = error.config;
     // Se erro 401 OU resposta com código INVALID_TOKEN, força logout global
     const isInvalidToken = error.response?.status === 401 || error.response?.data?.code === 'INVALID_TOKEN';

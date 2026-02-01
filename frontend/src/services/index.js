@@ -1,5 +1,8 @@
 import apiClient from './apiClient';
 
+// Exportar apiClient para uso direto em outros lugares
+export { apiClient };
+
 export const authService = {
   login: async (nickname, password, accessKeyCode) => {
     // Garante que está enviando nickname e não email
@@ -13,7 +16,7 @@ export const authService = {
 
   refreshToken: async (token) => {
     // Envia o token no header Authorization, igual às outras rotas
-    const response = await apiClient.post('/auth/refreshToken', {}, {
+    const response = await apiClient.post('/auth/refresh', {}, {
       headers: {
         Authorization: `Bearer ${token}`,
       },

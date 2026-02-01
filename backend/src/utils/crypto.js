@@ -13,8 +13,8 @@ export const comparePassword = async (password, hash) => {
 export const generateAccessKeyCode = () => {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let result = '';
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 15; i++) {
     result += characters.charAt(Math.floor(Math.random() * characters.length));
   }
-  return result;
+  return `VALET-${result}`;
 };

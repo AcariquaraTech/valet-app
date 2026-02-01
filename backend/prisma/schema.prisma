@@ -107,3 +107,36 @@ model SystemLog {
   
   @@map("system_logs")
 }
+
+// Access Keys (Licenças para clientes)
+model AccessKey {
+  id              String   @id @default(uuid())
+  code            String   @unique // Chave única (ex: VALET-ABC123XYZ)
+  clientName      String   // Nome do cliente
+  clientEmail     String?
+  clientPhone     String?
+  status          String   @default("active") // 'active', 'revoked', 'expired'
+  expiresAt       DateTime // Data de expiração da mensalidade
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  revokedAt       DateTime? // Quando foi revogada
+  revokedReason   String?  // Motivo da revogação
+  lastValidatedAt DateTime? // Última validação do app
+  deviceId        String?  // ID do device que está usando
+  
+  @@map("access_keys")
+}
+
+// Validações de Acesso (log de tentativas)
+model AccessValidationLog {
+  id           String   @id @default(uuid())
+  accessKeyId  String
+  deviceId     String?
+  ipAddress    String?
+  status       String   // 'valid', 'invalid', 'expired', 'revoked'
+  appVersion   String?
+  osVersion    String?
+  createdAt    DateTime @default(now())
+  
+  @@map("access_validation_logs")
+}

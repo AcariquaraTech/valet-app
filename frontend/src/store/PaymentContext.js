@@ -25,18 +25,15 @@ export const PaymentProvider = ({ children }) => {
         setMode(parsed.mode ?? 'pago');
         setHourValue(parsed.hourValue ?? '10');
         setDayValue(parsed.dayValue ?? '50');
-        Alert.alert('DEBUG', `Modo carregado: ${parsed.mode ?? 'pago'}\nHora: ${parsed.hourValue ?? '10'}\nDia: ${parsed.dayValue ?? '50'}`);
       } else {
         setMode('pago');
         setHourValue('10');
         setDayValue('50');
-        Alert.alert('DEBUG', 'AsyncStorage vazio, usando valores padrão');
       }
     } catch (e) {
       setMode('pago');
       setHourValue('10');
       setDayValue('50');
-      Alert.alert('ERRO', 'Erro ao ler AsyncStorage: ' + (e?.message || e));
     } finally {
       setLoading(false);
     }

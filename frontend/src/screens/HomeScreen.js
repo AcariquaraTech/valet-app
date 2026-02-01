@@ -2,13 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { View, StyleSheet, ScrollView, Alert, Text, TextInput, FlatList, TouchableOpacity, ActivityIndicator, AppState } from 'react-native';
-  // Forçar recarregamento ao voltar do background
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active' && reloadPaymentSettings) reloadPaymentSettings();
-    });
-    return () => subscription.remove();
-  }, [reloadPaymentSettings]);
 import { useAuth } from '../store/AuthContext';
 import apiClient from '../services/apiClient';
 import { usePayment } from '../store/PaymentContext';
@@ -25,28 +18,6 @@ const HomeScreen = ({ navigation }) => {
 
 
   const { user, company, forceInvalidToken, token } = useAuth();
-
-  // Não renderiza nada se não estiver autenticado (evita mostrar erro após logout)
-  if (!token || !user) {
-    return null;
-  }
-      // Se perder o token (logout global), redireciona para LoginScreen
-      useEffect(() => {
-        if (!token) {
-          navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
-        }
-      }, [token]);
-    // Função para testar rejeição automática de token inválido
-    const testInvalidToken = async () => {
-      await forceInvalidToken();
-      try {
-        // Tenta acessar um endpoint protegido (ex: /user/me)
-        await apiClient.get('/user/me');
-        Alert.alert('Falha', 'Token inválido NÃO foi rejeitado!');
-      } catch (err) {
-        Alert.alert('Sucesso', 'Token inválido rejeitado e usuário deslogado!');
-      }
-    };
   const { mode, hourValue, dayValue, saveSettings, loading: paymentLoading, saving: paymentSaving, reloadPaymentSettings } = usePayment();
   const [editMode, setEditMode] = useState(false);
   const [localMode, setLocalMode] = useState(mode);
@@ -54,11 +25,43 @@ const HomeScreen = ({ navigation }) => {
   const [localDay, setLocalDay] = useState(dayValue);
 
 
+  // Forçar recarregamento ao voltar do background
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && reloadPaymentSettings) reloadPaymentSettings();
+    });
+    return () => subscription.remove();
+  }, [reloadPaymentSettings]);
+
+  // Se perder o token (logout global), redireciona para LoginScreen
+  useEffect(() => {
+    if (!token) {
+      navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+    }
+  }, [token, navigation]);
+
   useEffect(() => {
     setLocalMode(mode);
     setLocalHour(hourValue);
     setLocalDay(dayValue);
   }, [mode, hourValue, dayValue]);
+
+  // Função para testar rejeição automática de token inválido
+  const testInvalidToken = async () => {
+    await forceInvalidToken();
+    try {
+      // Tenta acessar um endpoint protegido (ex: /user/me)
+      await apiClient.get('/user/me');
+      Alert.alert('Falha', 'Token inválido NÃO foi rejeitado!');
+    } catch (err) {
+      Alert.alert('Sucesso', 'Token inválido rejeitado e usuário deslogado!');
+    }
+  };
+
+  // Não renderiza nada se não estiver autenticado (evita mostrar erro após logout)
+  if (!token || !user) {
+    return null;
+  }
 
   // Sempre que a HomeScreen ganhar foco, recarrega configs do AsyncStorage
   useFocusEffect(
@@ -217,12 +220,7 @@ const HomeScreen = ({ navigation }) => {
                   ? `💳 Modo PAGO (R$/hora: ${hourValue}, R$/dia: ${dayValue})`
                   : '🆓 Modo GRATUITO'}
               </Text>
-              <Button
-                title="Alterar Configuração"
-                onPress={() => setEditMode(true)}
-                style={{ marginTop: 10 }}
-                variant="secondary"
-              />
+              {/* Botão Atualizar removido */}
             </>
           )}
         </Card>

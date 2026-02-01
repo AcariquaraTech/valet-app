@@ -40,7 +40,7 @@ app.use('/api/reports', authenticateToken, reportRoutes);
 app.use('/api/ocr', authenticateToken, ocrRoutes);
 app.use('/api/sms', authenticateToken, smsRoutes);
 app.use('/api/users', authenticateToken, userRoutes);
-app.use('/api/access-keys', authenticateToken, accessKeyRoutes);
+app.use('/api/access-keys', accessKeyRoutes);
 
 // 404 Handler
 app.use((req, res) => {

@@ -13,6 +13,9 @@ router.post('/login', login);
 // POST /api/auth/refresh
 router.post('/refresh', refreshToken);
 
+// POST /api/auth/refreshToken (alias para compatibilidade com o app)
+router.post('/refreshToken', refreshToken);
+
 // GET /api/auth/me
 router.get('/me', authenticateToken, me);
 
