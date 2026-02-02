@@ -1,7 +1,44 @@
 import express from 'express';
-import { authorize } from '../middleware/auth.js';
+import { authorize, authenticateToken } from '../middleware/auth.js';
+import prisma from '../lib/prisma.js';
 
 const router = express.Router();
+
+// GET /api/user/me - Obter dados do usuário logado (para validação de token)
+router.get('/me', authenticateToken, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        id: true,
+        name: true,
+        nickname: true,
+        role: true,
+        phone: true,
+        active: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuário não encontrado',
+      });
+    }
+
+    res.json({
+      success: true,
+      data: user,
+    });
+  } catch (error) {
+    console.error('Error in GET /me:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao buscar dados do usuário',
+      error: error.message,
+    });
+  }
+});
 
 // GET /api/users
 router.get('/', authorize('admin'), async (req, res) => {

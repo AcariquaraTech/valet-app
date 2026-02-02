@@ -56,10 +56,28 @@ export const AuthProvider = ({ children }) => {
       const savedUser = await AsyncStorage.getItem('user');
       const savedCompany = await AsyncStorage.getItem('company');
 
-      if (savedToken && savedUser && savedCompany) {
-        setToken(savedToken);
-        setUser(JSON.parse(savedUser));
-        setCompany(JSON.parse(savedCompany));
+      if (savedToken && savedUser) {
+        // Tenta validar o token no backend antes de usá-lo
+        try {
+          console.log('[AuthContext.bootstrapAsync] Validando token salvo...');
+          const response = await authService.validateToken(savedToken);
+          console.log('[AuthContext.bootstrapAsync] Token validado com sucesso');
+          
+          setToken(savedToken);
+          setUser(JSON.parse(savedUser));
+          if (savedCompany) {
+            setCompany(JSON.parse(savedCompany));
+          }
+        } catch (validationError) {
+          // Token inválido ou expirou
+          console.log('[AuthContext.bootstrapAsync] Token inválido ou expirou, fazendo logout');
+          await AsyncStorage.removeItem('authToken');
+          await AsyncStorage.removeItem('user');
+          await AsyncStorage.removeItem('company');
+          setToken(null);
+          setUser(null);
+          setCompany(null);
+        }
       }
     } catch (e) {
       console.error('Erro ao restaurar token:', e);
@@ -73,15 +91,26 @@ export const AuthProvider = ({ children }) => {
       setIsLoading(true);
       setError(null);
 
+      console.log('[AuthContext.login] Iniciando login com:', { nickname, accessKeyCode });
       const response = await authService.login(nickname, password, accessKeyCode);
+      console.log('[AuthContext.login] Resposta recebida:', JSON.stringify(response, null, 2));
+      
       // Compatível com backend: response.data.token, response.data.user, response.data.company
       const token = response?.data?.token || response?.token;
       const user = response?.data?.user || response?.user;
       const company = response?.data?.company || response?.company;
 
+      console.log('[AuthContext.login] Token extraído:', !!token, 'User:', user?.nickname, 'Company:', company);
+
+      if (!token) {
+        throw new Error('Token não fornecido na resposta do servidor');
+      }
+
       await AsyncStorage.setItem('authToken', token);
       await AsyncStorage.setItem('user', JSON.stringify(user));
-      await AsyncStorage.setItem('company', JSON.stringify(company));
+      if (company) {
+        await AsyncStorage.setItem('company', JSON.stringify(company));
+      }
 
       setToken(token);
       setUser(user);
@@ -92,9 +121,11 @@ export const AuthProvider = ({ children }) => {
         await payment.reloadPaymentSettings();
       }
 
+      console.log('[AuthContext.login] Login bem-sucedido!');
       return { token, user, company };
     } catch (err) {
-      const errorMessage = err.response?.data?.error || 'Erro ao fazer login';
+      console.log('[AuthContext.login] Erro capturado:', err.message, err.response?.data);
+      const errorMessage = err.response?.data?.error || err.message || 'Erro ao fazer login';
       setError(errorMessage);
       throw err;
     } finally {

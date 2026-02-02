@@ -105,7 +105,31 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   console.log('[LOGIN] Body recebido:', req.body);
   try {
-    const { nickname, password } = req.body;
+    const { nickname, password, accessKeyCode } = req.body;
+
+    // Validar access key code
+    if (accessKeyCode) {
+      const accessKey = await prisma.accessKey.findUnique({
+        where: { code: accessKeyCode },
+      });
+      console.log('[LOGIN] Access Key encontrada?', !!accessKey);
+      
+      if (!accessKey) {
+        console.log('[LOGIN] Access Key não encontrada');
+        return res.status(401).json({
+          success: false,
+          message: 'Código de chave de acesso inválido',
+        });
+      }
+
+      if (accessKey.status !== 'active') {
+        console.log('[LOGIN] Access Key inativa');
+        return res.status(403).json({
+          success: false,
+          message: 'Chave de acesso inativa',
+        });
+      }
+    }
 
     // Find user
     const user = await prisma.user.findUnique({
@@ -150,6 +174,15 @@ export const login = async (req, res) => {
     );
     console.log('[LOGIN] Token gerado:', token);
 
+    // Buscar dados da empresa se existirem
+    let company = null;
+    if (accessKeyCode) {
+      company = await prisma.accessKey.findUnique({
+        where: { code: accessKeyCode },
+        select: { clientName: true },
+      });
+    }
+
     console.log('[LOGIN] Login realizado com sucesso, retornando dados e token');
     res.json({
       success: true,
@@ -162,6 +195,7 @@ export const login = async (req, res) => {
           role: user.role,
         },
         token,
+        company: company ? { name: company.clientName } : null,
       },
     });
   } catch (error) {

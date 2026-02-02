@@ -5,8 +5,26 @@ import { sendSMS } from '../services/smsService.js';
 // Register vehicle entry
 export const registerEntry = async (req, res) => {
   try {
-    const { plate, model, color, year, clientName, clientPhone, spotNumber, observations } = req.body;
+    // Aceita ambos: snake_case (client_name) e camelCase (clientName)
+    const {
+      plate,
+      model,
+      color,
+      year,
+      clientName = req.body.client_name,
+      clientPhone = req.body.client_phone,
+      spotNumber = req.body.spot_number,
+      observations = req.body.observation,
+    } = req.body;
     const operatorId = req.user.id;
+
+    // Validar plate
+    if (!plate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Placa do veículo é obrigatória',
+      });
+    }
 
     // Check if vehicle exists
     let vehicle = await prisma.vehicle.findUnique({
@@ -164,16 +182,64 @@ export const listParkedVehicles = async (req, res) => {
 
     res.json({
       success: true,
-      data: {
-        entries,
-        count: entries.length,
-      },
+      data: entries,
+      count: entries.length,
     });
   } catch (error) {
     console.error('Error in listParkedVehicles:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao listar veículos',
+      error: error.message,
+    });
+  }
+};
+
+// Get vehicle entry details by ID
+export const getVehicleEntryDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const entry = await prisma.vehicleEntry.findUnique({
+      where: { id },
+      include: {
+        vehicle: {
+          include: {
+            client: {
+              select: {
+                id: true,
+                name: true,
+                phone: true,
+              },
+            },
+          },
+        },
+        operator: {
+          select: {
+            id: true,
+            name: true,
+            nickname: true,
+          },
+        },
+      },
+    });
+
+    if (!entry) {
+      return res.status(404).json({
+        success: false,
+        message: 'Entrada não encontrada',
+      });
+    }
+
+    res.json({
+      success: true,
+      data: { entry },
+    });
+  } catch (error) {
+    console.error('Error in getVehicleEntryDetails:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao buscar detalhes da entrada',
       error: error.message,
     });
   }

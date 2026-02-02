@@ -1,3 +1,4 @@
+// Force Metro rebuild - 2026-02-01 14:20
 import React, { useState } from 'react';
 import {
   View,
@@ -15,6 +16,8 @@ import { useAccessKey } from '../store/AccessKeyContext';
 export default function AccessKeyScreen({ navigation }) {
   const [key, setKey] = useState('');
   const { validateNewAccessKey, loading } = useAccessKey();
+
+  console.log('[AccessKeyScreen] RENDERIZANDO AGORA!');
 
   const handleValidateKey = async () => {
     if (!key.trim()) {
@@ -39,6 +42,19 @@ export default function AccessKeyScreen({ navigation }) {
       );
     } else {
       Alert.alert('Erro', result.error);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    try {
+      console.log('[AccessKeyScreen] Testando conexão com backend...');
+      const response = await fetch('http://127.0.0.1:3000/api/health');
+      const data = await response.json();
+      console.log('[AccessKeyScreen] Resposta do health check:', data);
+      Alert.alert('Sucesso', 'Backend está acessível!\n\n' + JSON.stringify(data, null, 2));
+    } catch (err) {
+      console.log('[AccessKeyScreen] Erro na conexão:', err);
+      Alert.alert('Erro', 'Não conseguiu conectar ao backend:\n' + err.message);
     }
   };
 
@@ -89,6 +105,14 @@ export default function AccessKeyScreen({ navigation }) {
           ) : (
             <Text style={styles.buttonText}>Validar Chave</Text>
           )}
+        </TouchableOpacity>
+
+        {/* Test Connection Button */}
+        <TouchableOpacity
+          style={styles.testButton}
+          onPress={handleTestConnection}
+        >
+          <Text style={styles.testButtonText}>🔧 Testar Conexão</Text>
         </TouchableOpacity>
 
         {/* Info Box */}
@@ -198,6 +222,18 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  testButton: {
+    backgroundColor: '#FF9800',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  testButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   infoBox: {
     backgroundColor: '#FFF3E0',

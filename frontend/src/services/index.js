@@ -11,6 +11,7 @@ export const authService = {
       password,
       accessKeyCode,
     });
+    console.log('[authService.login] Response completo:', JSON.stringify(response.data, null, 2));
     return response.data;
   },
 
@@ -28,6 +29,16 @@ export const authService = {
     const response = await apiClient.post('/auth/logout');
     return response.data;
   },
+
+  validateToken: async (token) => {
+    // Valida o token fazendo uma requisição simples ao backend
+    const response = await apiClient.get('/user/me', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  },
 };
 
 export const vehicleService = {
@@ -43,8 +54,8 @@ export const vehicleService = {
     return response.data;
   },
 
-  registerExit: async (vehicleId, notes) => {
-    const response = await apiClient.post(`/vehicles/exit/${vehicleId}`, { notes });
+  registerExit: async (entryId, notes = '', totalPrice = undefined) => {
+    const response = await apiClient.post('/vehicles/exit', { entryId, notes, totalPrice });
     return response.data;
   },
 

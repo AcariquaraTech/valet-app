@@ -18,8 +18,11 @@ function MainNavigator() {
   const { isSignedIn } = useAuth();
   const { isValidated, loading } = useAccessKey();
 
+  console.log('[MainNavigator] isSignedIn:', isSignedIn, 'isValidated:', isValidated, 'loading:', loading);
+
   // Se não tem chave validada, mostra tela de inserção
   if (!isValidated && !loading) {
+    console.log('[MainNavigator] Mostrando AccessKeyScreen');
     return (
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="AccessKey" component={AccessKeyScreen} />
@@ -43,25 +46,25 @@ function MainNavigator() {
 
 export default function App() {
   useEffect(() => {
-    console.log('App.js: useEffect mounted');
+    console.log('App.js NEW2026: useEffect mounted');
   }, []);
 
-  console.log('App.js: render start');
+  console.log('App.js NEW2026: render start');
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      {console.log('App.js: Inside GestureHandlerRootView')}
+      {console.log('App.js NEW2026: Inside GestureHandlerRootView')}
       <AccessKeyProvider>
-        {console.log('App.js: Inside AccessKeyProvider')}
+        {console.log('App.js NEW2026: Inside AccessKeyProvider')}
         <PaymentProvider>
-          {console.log('App.js: Inside PaymentProvider')}
+          {console.log('App.js NEW2026: Inside PaymentProvider')}
           <AuthProvider>
-            {console.log('App.js: Inside AuthProvider')}
+            {console.log('App.js NEW2026: Inside AuthProvider')}
             <NavigationContainer
               ref={navigationRef}
-              onReady={() => console.log('NavigationContainer: onReady')}
-              onStateChange={() => console.log('NavigationContainer: onStateChange')}
+              onReady={() => console.log('NavigationContainer NEW2026: onReady')}
+              onStateChange={() => console.log('NavigationContainer NEW2026: onStateChange')}
             >
-              {console.log('App.js: Inside NavigationContainer')}
+              {console.log('App.js NEW2026: Inside NavigationContainer')}
               <MainNavigator />
             </NavigationContainer>
           </AuthProvider>

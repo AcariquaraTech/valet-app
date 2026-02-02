@@ -4,6 +4,7 @@ import {
   registerEntry,
   registerExit,
   listParkedVehicles,
+  getVehicleEntryDetails,
   getVehicleHistory,
   recognizePlate,
 } from '../controllers/vehicleController.js';
@@ -21,6 +22,9 @@ router.post('/exit', registerExit);
 
 // GET /api/vehicles/parked
 router.get('/parked', listParkedVehicles);
+
+// GET /api/vehicles/:id (entry details)
+router.get('/:id', getVehicleEntryDetails);
 
 // GET /api/vehicles/:plate/history
 router.get('/:plate/history', getVehicleHistory);

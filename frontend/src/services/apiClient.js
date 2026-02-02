@@ -6,8 +6,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 let globalLogout = null;
 export const setGlobalLogout = (fn) => { globalLogout = fn; };
 
-// Use IP direto para conexão via ADB port forwarding
-const API_URL = 'http://127.0.0.1:3000/api';
+// Em dispositivo físico, use o IP da máquina (rede local)
+const API_URL = 'http://192.168.0.5:3000/api';
 
 const apiClient = axios.create({
   baseURL: API_URL,

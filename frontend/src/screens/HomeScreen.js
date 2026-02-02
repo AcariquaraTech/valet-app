@@ -16,14 +16,12 @@ const HomeScreen = ({ navigation }) => {
   const [parkedVehicles, setParkedVehicles] = useState([]);
   const [loading, setLoading] = useState(false);
 
-
   const { user, company, forceInvalidToken, token } = useAuth();
   const { mode, hourValue, dayValue, saveSettings, loading: paymentLoading, saving: paymentSaving, reloadPaymentSettings } = usePayment();
   const [editMode, setEditMode] = useState(false);
   const [localMode, setLocalMode] = useState(mode);
   const [localHour, setLocalHour] = useState(hourValue);
   const [localDay, setLocalDay] = useState(dayValue);
-
 
   // Forçar recarregamento ao voltar do background
   useEffect(() => {
@@ -46,6 +44,19 @@ const HomeScreen = ({ navigation }) => {
     setLocalDay(dayValue);
   }, [mode, hourValue, dayValue]);
 
+  // Sempre que a HomeScreen ganhar foco, recarrega configs do AsyncStorage
+  useFocusEffect(
+    React.useCallback(() => {
+      if (reloadPaymentSettings) reloadPaymentSettings();
+    }, [reloadPaymentSettings])
+  );
+
+  useEffect(() => {
+    if (token && user) {
+      loadParkedVehicles();
+    }
+  }, [token, user]);
+
   // Função para testar rejeição automática de token inválido
   const testInvalidToken = async () => {
     await forceInvalidToken();
@@ -63,23 +74,14 @@ const HomeScreen = ({ navigation }) => {
     return null;
   }
 
-  // Sempre que a HomeScreen ganhar foco, recarrega configs do AsyncStorage
-  useFocusEffect(
-    React.useCallback(() => {
-      if (reloadPaymentSettings) reloadPaymentSettings();
-    }, [reloadPaymentSettings])
-  );
-
-  useEffect(() => {
-    loadParkedVehicles();
-  }, []);
-
   const loadParkedVehicles = async () => {
     try {
       setLoading(true);
       const data = await vehicleService.getParkedVehicles();
-      setParkedVehicles(data.data);
+      // Backend retorna array direto em 'data'
+      setParkedVehicles(Array.isArray(data.data) ? data.data : []);
     } catch (error) {
+      console.error('Erro ao carregar veículos:', error);
       Alert.alert('Erro', 'Erro ao carregar veículos');
     } finally {
       setLoading(false);
@@ -120,22 +122,28 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
-  const handleRegisterExit = async (vehicleId) => {
+  const handleRegisterExit = async (entryId) => {
     try {
       setLoading(true);
-      // Buscar dados do veículo para pegar telefone e placa
-      const details = await vehicleService.getVehicleDetails(vehicleId);
-      const { plate, client_phone } = details.data || {};
-      await vehicleService.registerExit(vehicleId);
+      // Buscar dados da entrada para pegar telefone e placa
+      const details = await vehicleService.getVehicleDetails(entryId);
+      const entry = details?.entry || details?.data?.entry;
+      const plate = entry?.vehicle?.plate;
+      const clientPhone = entry?.vehicle?.client?.phone;
+      
+      const totalPrice = mode === 'gratuito' ? 0 : undefined;
+      await vehicleService.registerExit(entryId, '', totalPrice);
+      
       // Envio automático de SMS na saída
-      if (client_phone) {
+      if (clientPhone) {
         const message = `Seu veículo placa ${plate} saiu do estacionamento às ${new Date().toLocaleTimeString('pt-BR')}`;
-        console.log('Chamando openSmsApp para saída:', client_phone, message);
-        openSmsApp(client_phone, message);
+        console.log('Chamando openSmsApp para saída:', clientPhone, message);
+        openSmsApp(clientPhone, message);
       }
       Alert.alert('Sucesso', 'Saída registrada com sucesso');
       loadParkedVehicles();
     } catch (error) {
+      console.error('Erro ao registrar saída:', error);
       Alert.alert('Erro', error.response?.data?.error || 'Erro ao registrar saída');
     } finally {
       setLoading(false);
@@ -189,7 +197,7 @@ const HomeScreen = ({ navigation }) => {
                   />
                 </>
               )}
-              <View style={{ flexDirection: 'row', marginTop: 10 }}>
+              <View style={{ marginTop: 15, gap: 8 }}>
                 <Button
                   title={paymentSaving ? "Salvando..." : "Salvar"}
                   onPress={async () => {
@@ -198,7 +206,6 @@ const HomeScreen = ({ navigation }) => {
                   }}
                   loading={paymentSaving}
                   disabled={paymentSaving}
-                  style={{ flex: 1, marginRight: 8 }}
                 />
                 <Button
                   title="Cancelar"
@@ -208,7 +215,6 @@ const HomeScreen = ({ navigation }) => {
                     setLocalDay(dayValue);
                     setEditMode(false);
                   }}
-                  style={{ flex: 1 }}
                   variant="secondary"
                 />
               </View>
@@ -220,7 +226,12 @@ const HomeScreen = ({ navigation }) => {
                   ? `💳 Modo PAGO (R$/hora: ${hourValue}, R$/dia: ${dayValue})`
                   : '🆓 Modo GRATUITO'}
               </Text>
-              {/* Botão Atualizar removido */}
+              <Button
+                title="Editar"
+                onPress={() => setEditMode(true)}
+                variant="secondary"
+                style={{ marginTop: 10 }}
+              />
             </>
           )}
         </Card>

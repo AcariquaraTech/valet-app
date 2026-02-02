@@ -17,9 +17,12 @@ const app = express();
 
 // Middleware
 app.use(helmet());
+// CORS permissivo para mobile
 app.use(cors({
-  origin: config.cors.origin,
+  origin: ['*', 'http://localhost:*', 'http://127.0.0.1:*', 'http://192.168.0.5:*'],
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -35,6 +38,13 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'Backend API is healthy',
+    timestamp: new Date().toISOString(),
+  });
+});
 app.use('/api/vehicles', authenticateToken, vehicleRoutes);
 app.use('/api/reports', authenticateToken, reportRoutes);
 app.use('/api/ocr', authenticateToken, ocrRoutes);
@@ -57,7 +67,7 @@ app.use(errorHandler);
 // Server
 const PORT = config.port;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`
 ╔════════════════════════════════════════╗
 ║     APP VALET - Backend Running        ║
@@ -65,6 +75,22 @@ app.listen(PORT, () => {
 ║     Ambiente: ${config.nodeEnv}              ║
 ╚════════════════════════════════════════╝
   `);
+});
+
+// Handlers para evitar crashes
+process.on('uncaughtException', (err) => {
+  console.error('[UNCAUGHT EXCEPTION]', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[UNHANDLED REJECTION]', reason);
+});
+
+server.on('clientError', (err, socket) => {
+  console.error('[CLIENT ERROR]', err);
+  if (socket.writable) {
+    socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
+  }
 });
 
 export default app;

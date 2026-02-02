@@ -1,8 +1,13 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { apiClient } from '../services';
+import axios from 'axios';
 
 const AccessKeyContext = createContext();
+
+const accessKeyClient = axios.create({
+  baseURL: 'http://localhost:3000/api',
+  timeout: 10000,
+});
 
 export const useAccessKey = () => {
   const context = useContext(AccessKeyContext);
@@ -58,7 +63,7 @@ export const AccessKeyProvider = ({ children }) => {
 
   const validateAccessKeyWithServer = async (key) => {
     try {
-      const response = await apiClient.post('/access-keys/validate', {
+      const response = await accessKeyClient.post('/access-keys/validate', {
         code: key,
         deviceId: 'mobile-device',
         appVersion: '1.0.0',
@@ -96,10 +101,15 @@ export const AccessKeyProvider = ({ children }) => {
 
   const validateNewAccessKey = async (key) => {
     try {
+      console.log('[validateNewAccessKey-NEW2026] Iniciando validação com chave:', key);
+      console.log('[validateNewAccessKey-NEW2026] accessKeyClient tipo:', typeof accessKeyClient);
+      console.log('[validateNewAccessKey-NEW2026] accessKeyClient:', accessKeyClient);
+      
       setLoading(true);
       setError(null);
 
-      const response = await apiClient.post('/access-keys/validate', {
+      console.log('[validateNewAccessKey-NEW2026] Fazendo POST para /access-keys/validate');
+      const response = await accessKeyClient.post('/access-keys/validate', {
         code: key,
         deviceId: 'mobile-device',
         appVersion: '1.0.0',
@@ -130,8 +140,11 @@ export const AccessKeyProvider = ({ children }) => {
         };
       }
     } catch (err) {
-      console.log('[validateNewAccessKey] Erro completo:', err);
-      console.log('[validateNewAccessKey] Response data:', err.response?.data);
+      console.log('[validateNewAccessKey-NEW2026] ERRO CAPTURADO:', err);
+      console.log('[validateNewAccessKey-NEW2026] err.message:', err.message);
+      console.log('[validateNewAccessKey-NEW2026] err.code:', err.code);
+      console.log('[validateNewAccessKey-NEW2026] err.response:', err.response);
+      console.log('[validateNewAccessKey-NEW2026] Tipo do erro:', Object.prototype.toString.call(err));
       
       const errorCode = err.response?.data?.code;
       let errorMessage = err.response?.data?.error || 'Erro ao validar chave';
