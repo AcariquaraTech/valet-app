@@ -31,6 +31,22 @@ export const registerEntry = async (req, res) => {
       where: { plate },
     });
 
+    // Se o veículo existe, verifica se já tem uma entrada ativa (não saída)
+    if (vehicle) {
+      const activeEntry = await prisma.vehicleEntry.findFirst({
+        where: {
+          vehicleId: vehicle.id,
+          status: 'parked',
+        },
+      });
+      if (activeEntry) {
+        return res.status(400).json({
+          success: false,
+          message: `Veículo ${plate} já possui uma entrada ativa no sistema. Registre a saída antes de fazer uma nova entrada.`,
+        });
+      }
+    }
+
     // If vehicle doesn't exist, create it with the operator as client
     if (!vehicle) {
       vehicle = await prisma.vehicle.create({

@@ -1,18 +1,119 @@
 import React, { useEffect } from 'react';
+import { Text } from 'react-native';
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 export const navigationRef = createNavigationContainerRef();
 import { createStackNavigator } from '@react-navigation/stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { PaymentProvider } from './src/store/PaymentContext';
 import { AuthProvider, useAuth } from './src/store/AuthContext';
 import { AccessKeyProvider, useAccessKey } from './src/store/AccessKeyContext';
 import HomeScreen from './src/screens/HomeScreen';
 import LoginScreen from './src/screens/LoginScreen';
+import EntryExitScreen from './src/screens/EntryExitScreen';
+import ParkedVehiclesScreen from './src/screens/ParkedVehiclesScreen';
 import ReportsScreen from './src/screens/ReportsScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
 import AccessKeyScreen from './src/screens/AccessKeyScreen';
 
 const Stack = createStackNavigator();
+const Tab = createBottomTabNavigator();
+
+// Stack para as abas que podem ter navegação interna
+function EntryExitStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="EntryExit" component={EntryExitScreen} />
+    </Stack.Navigator>
+  );
+}
+
+function ParkedVehiclesStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="ParkedVehicles" component={ParkedVehiclesScreen} />
+    </Stack.Navigator>
+  );
+}
+
+function ReportsStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Reports" component={ReportsScreen} />
+    </Stack.Navigator>
+  );
+}
+
+function SettingsStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Settings" component={SettingsScreen} />
+    </Stack.Navigator>
+  );
+}
+
+// Navigator com abas para usuários logados
+function TabNavigator() {
+  const { user } = useAuth();
+  
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: '#007AFF',
+        tabBarInactiveTintColor: '#999',
+        tabBarStyle: {
+          backgroundColor: '#fff',
+          borderTopWidth: 1,
+          borderTopColor: '#eee',
+          height: 60,
+          paddingBottom: 8,
+          paddingTop: 8,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '500',
+        },
+      }}
+    >
+      <Tab.Screen
+        name="EntryExitTab"
+        component={EntryExitStack}
+        options={{
+          tabBarLabel: 'Entrada',
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20 }}>📝</Text>,
+        }}
+      />
+      <Tab.Screen
+        name="ParkedVehiclesTab"
+        component={ParkedVehiclesStack}
+        options={{
+          tabBarLabel: 'No Pátio',
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20 }}>🚗</Text>,
+        }}
+      />
+      {user?.role === 'admin' && (
+        <Tab.Screen
+          name="ReportsTab"
+          component={ReportsStack}
+          options={{
+            tabBarLabel: 'Relatórios',
+            tabBarIcon: ({ color }) => <Text style={{ fontSize: 20 }}>📊</Text>,
+          }}
+        />
+      )}
+      <Tab.Screen
+        name="SettingsTab"
+        component={SettingsStack}
+        options={{
+          tabBarLabel: 'Config',
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20 }}>⚙️</Text>,
+        }}
+      />
+    </Tab.Navigator>
+  );
+}
 
 function MainNavigator() {
   const { isSignedIn } = useAuth();
@@ -34,8 +135,7 @@ function MainNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {isSignedIn ? (
         <>
-          <Stack.Screen name="Home" component={HomeScreen} />
-          <Stack.Screen name="ReportsScreen" component={ReportsScreen} />
+          <Stack.Screen name="HomeTabs" component={TabNavigator} />
         </>
       ) : (
         <Stack.Screen name="Login" component={LoginScreen} />

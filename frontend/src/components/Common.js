@@ -1,13 +1,14 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 
-export const Button = ({ onPress, title, loading, disabled, variant = 'primary', ...props }) => {
+export const Button = ({ onPress, title, loading, disabled, variant = 'primary', style, ...props }) => {
   return (
     <TouchableOpacity
       style={[
         styles.button,
         styles[`${variant}Button`],
         disabled && styles.disabledButton,
+        style,
       ]}
       onPress={onPress}
       disabled={disabled || loading}
