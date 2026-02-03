@@ -113,6 +113,7 @@ model AccessKey {
   id              String   @id @default(uuid())
   code            String   @unique // Chave única (ex: VALET-ABC123XYZ)
   clientName      String   // Nome do cliente
+  companyName     String?  // Nome da empresa do cliente
   clientEmail     String?
   clientPhone     String?
   status          String   @default("active") // 'active', 'revoked', 'expired'

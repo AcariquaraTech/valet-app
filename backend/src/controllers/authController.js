@@ -174,12 +174,21 @@ export const login = async (req, res) => {
     );
     console.log('[LOGIN] Token gerado:', token);
 
-    // Buscar dados da empresa se existirem
-    let company = null;
+    // Buscar dados da AccessKey (vinculada ao cliente)
+    let accessKeyData = null;
     if (accessKeyCode) {
-      company = await prisma.accessKey.findUnique({
+      accessKeyData = await prisma.accessKey.findUnique({
         where: { code: accessKeyCode },
-        select: { clientName: true },
+        select: { 
+          id: true,
+          code: true,
+          clientName: true,
+          companyName: true,
+          clientEmail: true,
+          clientPhone: true,
+          status: true,
+          expiresAt: true,
+        },
       });
     }
 
@@ -195,7 +204,7 @@ export const login = async (req, res) => {
           role: user.role,
         },
         token,
-        company: company ? { name: company.clientName } : null,
+        accessKey: accessKeyData,
       },
     });
   } catch (error) {

@@ -5,7 +5,7 @@ import { usePayment } from '../store/PaymentContext';
 import { Button, Card } from '../components/Common';
 
 const SettingsScreen = ({ navigation }) => {
-  const { user, company, logout } = useAuth();
+  const { user, accessKey, company, logout } = useAuth();
   const { mode, hourValue, dayValue, saveSettings, loading: paymentLoading, saving: paymentSaving, reloadPaymentSettings } = usePayment();
   
   const [editMode, setEditMode] = useState(false);
@@ -57,21 +57,26 @@ const SettingsScreen = ({ navigation }) => {
         <Card>
           <Text style={styles.sectionTitle}>👤 Seu Perfil</Text>
           <View style={styles.infoBox}>
-            <Text style={styles.infoLabel}>Nome</Text>
-            <Text style={styles.infoValue}>{user?.name}</Text>
-          </View>
-          <View style={styles.infoBox}>
-            <Text style={styles.infoLabel}>Apelido</Text>
-            <Text style={styles.infoValue}>{user?.nickname}</Text>
+            <Text style={styles.infoLabel}>Nome do Cliente</Text>
+            <Text style={styles.infoValue}>{accessKey?.clientName || user?.name || 'N/A'}</Text>
           </View>
           <View style={styles.infoBox}>
             <Text style={styles.infoLabel}>Empresa</Text>
-            <Text style={styles.infoValue}>{company?.company_name}</Text>
+            <Text style={styles.infoValue}>{accessKey?.companyName || company?.company_name || 'N/A'}</Text>
           </View>
           <View style={styles.infoBox}>
-            <Text style={styles.infoLabel}>Perfil</Text>
+            <Text style={styles.infoLabel}>Apelido (Usuário)</Text>
+            <Text style={styles.infoValue}>{user?.nickname}</Text>
+          </View>
+          <View style={styles.infoBox}>
+            <Text style={styles.infoLabel}>Tipo de Usuário</Text>
             <Text style={[styles.infoValue, { textTransform: 'capitalize' }]}>{user?.role === 'admin' ? 'Administrador' : 'Operador'}</Text>
           </View>
+          <Button
+            title="✏️ Ver Perfil Completo"
+            onPress={() => navigation.navigate('EditProfileScreen')}
+            variant="secondary"
+          />
         </Card>
 
         {/* Configuração de Pagamento */}
