@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, Alert, Text, TouchableOpacity } from 'react-native';
 import { TextInput } from '../components/Common';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../store/AuthContext';
+import { useAccessKey } from '../store/AccessKeyContext';
 import { Button, Card } from '../components/Common';
 
 const LoginScreen = ({ navigation }) => {
@@ -13,6 +14,13 @@ const LoginScreen = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
 
   const { login } = useAuth();
+  const { accessKey } = useAccessKey();
+
+  useEffect(() => {
+    if (accessKey) {
+      setAccessKeyCode(accessKey);
+    }
+  }, [accessKey]);
 
   const handleLogin = async () => {
     if (!nickname || !password || !accessKeyCode) {
@@ -79,7 +87,7 @@ const LoginScreen = ({ navigation }) => {
             value={accessKeyCode}
             onChangeText={setAccessKeyCode}
             autoCapitalize="characters"
-            editable={!loading}
+            editable={!loading && !accessKey}
           />
         </Card>
 
