@@ -56,7 +56,13 @@ export const registerEntry = async (req, res) => {
           color,
           year,
           clientId: operatorId, // Using operator as temporary client
+          clientPhone: clientPhone || null,
         },
+      });
+    } else if (clientPhone && vehicle.clientPhone !== clientPhone) {
+      vehicle = await prisma.vehicle.update({
+        where: { id: vehicle.id },
+        data: { clientPhone },
       });
     }
 

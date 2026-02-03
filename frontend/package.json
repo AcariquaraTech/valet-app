@@ -3,8 +3,10 @@
   "version": "1.0.0",
   "description": "APP Valet Mobile - Gerenciamento de Estacionamento",
   "scripts": {
-    "start": "expo start",
-    "test": "jest"
+    "start": "expo start --dev-client",
+    "test": "jest",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "dependencies": {
     "@prisma/client": "^7.3.0",
@@ -20,7 +22,8 @@
     "react-native": "0.71.14",
     "react-native-gesture-handler": "~2.9.0",
     "react-native-safe-area-context": "4.5.0",
-    "react-native-vector-icons": "^10.3.0"
+    "react-native-vector-icons": "^10.3.0",
+    "expo-splash-screen": "~0.18.2"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

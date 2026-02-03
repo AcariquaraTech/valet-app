@@ -21,9 +21,16 @@ const LoginScreen = ({ navigation }) => {
     }
     try {
       setLoading(true);
-      await login(nickname, password, accessKeyCode);
+      
+      // Adiciona timeout de 10 segundos
+      const loginPromise = login(nickname, password, accessKeyCode);
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Conexão expirou. Verifique seu usuário e tente novamente.')), 10000)
+      );
+      
+      await Promise.race([loginPromise, timeoutPromise]);
     } catch (error) {
-      Alert.alert('Erro de Login', error.response?.data?.error || 'Erro ao fazer login');
+      Alert.alert('Erro de Login', error.message || error.response?.data?.error || 'Erro ao fazer login');
     } finally {
       setLoading(false);
     }

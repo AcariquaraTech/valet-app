@@ -2,8 +2,8 @@ import React, { useEffect } from 'react';
 import { Text } from 'react-native';
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
-export const navigationRef = createNavigationContainerRef();
+import { NavigationContainer } from '@react-navigation/native';
+import { navigationRef } from './src/utils/navigationRef';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { PaymentProvider } from './src/store/PaymentContext';
@@ -15,6 +15,7 @@ import EntryExitScreen from './src/screens/EntryExitScreen';
 import ParkedVehiclesScreen from './src/screens/ParkedVehiclesScreen';
 import ReportsScreen from './src/screens/ReportsScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import EditProfileScreen from './src/screens/EditProfileScreen';
 import AccessKeyScreen from './src/screens/AccessKeyScreen';
 
 const Stack = createStackNavigator();
@@ -49,6 +50,7 @@ function SettingsStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
     </Stack.Navigator>
   );
 }

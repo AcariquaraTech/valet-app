@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { setGlobalLogout } from '../services/apiClient';
-import { navigationRef } from '../../App';
+import { navigationRef } from '../utils/navigationRef';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authService } from '../services';
 import { usePayment } from './PaymentContext';

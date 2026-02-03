@@ -134,7 +134,7 @@ const HomeScreen = ({ navigation }) => {
       const details = await vehicleService.getVehicleDetails(entryId);
       const entry = details?.entry || details?.data?.entry;
       const plate = entry?.vehicle?.plate;
-      const clientPhone = entry?.vehicle?.client?.phone;
+      const clientPhone = entry?.vehicle?.clientPhone || entry?.vehicle?.client_phone || entry?.vehicle?.client?.phone;
       
       const totalPrice = mode === 'gratuito' ? 0 : undefined;
       await vehicleService.registerExit(entryId, '', totalPrice);
@@ -403,7 +403,7 @@ const HomeScreen = ({ navigation }) => {
 
                 <View style={styles.detailSection}>
                   <Text style={styles.detailLabel}>Telefone</Text>
-                  <Text style={styles.detailValue}>{selectedVehicle.vehicle?.client?.phone || 'Sem informação'}</Text>
+                  <Text style={styles.detailValue}>{selectedVehicle.vehicle?.clientPhone || selectedVehicle.vehicle?.client_phone || selectedVehicle.vehicle?.client?.phone || 'Sem informação'}</Text>
                 </View>
 
                 <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
