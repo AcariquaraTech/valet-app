@@ -41,6 +41,68 @@ router.get('/me', authenticateToken, async (req, res) => {
   }
 });
 
+// GET /api/user/my-team - Listar usuários da mesma chave de acesso (admin e operador)
+router.get('/my-team', authenticateToken, async (req, res) => {
+  try {
+    // Busca o usuário logado com suas chaves de acesso
+    const currentUser = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      include: {
+        accessKeys: {
+          select: { id: true },
+        },
+      },
+    });
+
+    if (!currentUser || !currentUser.accessKeys || currentUser.accessKeys.length === 0) {
+      return res.json({
+        success: true,
+        data: [],
+      });
+    }
+
+    // Pega a primeira chave de acesso do usuário
+    const accessKeyId = currentUser.accessKeys[0].id;
+
+    // Busca todos os usuários vinculados à mesma chave
+    const accessKey = await prisma.accessKey.findUnique({
+      where: { id: accessKeyId },
+      include: {
+        users: {
+          select: {
+            id: true,
+            nickname: true,
+            name: true,
+            phone: true,
+            email: true,
+            role: true,
+            active: true,
+          },
+        },
+      },
+    });
+
+    if (!accessKey) {
+      return res.json({
+        success: true,
+        data: [],
+      });
+    }
+
+    res.json({
+      success: true,
+      data: accessKey.users,
+    });
+  } catch (error) {
+    console.error('Error in GET /my-team:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao buscar equipe',
+      message: error.message,
+    });
+  }
+});
+
 // GET /api/users
 router.get('/', authorize('admin'), async (req, res) => {
   try {

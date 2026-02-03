@@ -179,7 +179,7 @@ const SettingsScreen = ({ navigation }) => {
             <Text style={styles.sectionTitle}>👥 Gerenciamento</Text>
             <Button
               title="👥 Gerenciar Usuários"
-              onPress={() => navigation.navigate('UsersScreen')}
+              onPress={() => navigation.navigate('UserManagement')}
             />
           </Card>
         )}

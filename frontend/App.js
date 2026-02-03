@@ -17,6 +17,7 @@ import ReportsScreen from './src/screens/ReportsScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import EditProfileScreen from './src/screens/EditProfileScreen';
 import AccessKeyScreen from './src/screens/AccessKeyScreen';
+import UserManagementScreen from './src/screens/UserManagementScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -51,6 +52,7 @@ function SettingsStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
+      <Stack.Screen name="UserManagement" component={UserManagementScreen} />
     </Stack.Navigator>
   );
 }
