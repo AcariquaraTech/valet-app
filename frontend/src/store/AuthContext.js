@@ -155,15 +155,22 @@ export const AuthProvider = ({ children }) => {
       setIsLoading(true);
       await authService.logout();
       
+      // Limpar dados de autenticação
       await AsyncStorage.removeItem('authToken');
       await AsyncStorage.removeItem('user');
       await AsyncStorage.removeItem('company');
       await AsyncStorage.removeItem('accessKey');
+      
+      // Limpar dados de AccessKey também
+      await AsyncStorage.removeItem('accessKeyCode');
+      await AsyncStorage.removeItem('accessKeyData');
+      await AsyncStorage.removeItem('accessKeyLastValidation');
 
       setToken(null);
       setUser(null);
       setCompany(null);
       setAccessKey(null);
+      
       // Redireciona para tela de login se possível
       if (navigationRef.isReady()) {
         navigationRef.reset({
@@ -178,6 +185,33 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Sair apenas do usuário atual (mantém a chave de acesso para trocar usuário)
+  const logoutToLogin = async () => {
+    console.log('[AuthContext] logoutToLogin chamado');
+    try {
+      // Limpa os estados imediatamente (síncrono)
+      setToken(null);
+      setUser(null);
+      setCompany(null);
+      // Não limpa setAccessKey para permitir troca de usuário
+      
+      // Remove do AsyncStorage (assíncrono mas não esperamos)
+      AsyncStorage.removeItem('authToken');
+      AsyncStorage.removeItem('user');
+      AsyncStorage.removeItem('company');
+      // Mantém a chave de acesso
+
+      // Tenta chamar logout no servidor (não bloqueante)
+      authService.logout().catch(err => {
+        console.warn('[AuthContext] Erro ao chamar logout no servidor:', err);
+      });
+
+      console.log('[AuthContext] Estados limpos, React Navigation deve voltar para Login automaticamente');
+    } catch (err) {
+      console.error('[AuthContext] Erro ao trocar usuário:', err);
+    }
+  };
+
   const value = {
     user,
     company,
@@ -187,6 +221,7 @@ export const AuthProvider = ({ children }) => {
     error,
     login,
     logout,
+    logoutToLogin,
     isSignedIn: !!token,
     setTokenAndUser, // expõe função para atualização externa
     forceInvalidToken, // expõe função de teste

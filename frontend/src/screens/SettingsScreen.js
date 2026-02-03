@@ -5,7 +5,7 @@ import { usePayment } from '../store/PaymentContext';
 import { Button, Card } from '../components/Common';
 
 const SettingsScreen = ({ navigation }) => {
-  const { user, accessKey, company, logout } = useAuth();
+  const { user, accessKey, company, logoutToLogin } = useAuth();
   const { mode, hourValue, dayValue, saveSettings, loading: paymentLoading, saving: paymentSaving, reloadPaymentSettings } = usePayment();
   
   const [editMode, setEditMode] = useState(false);
@@ -21,22 +21,29 @@ const SettingsScreen = ({ navigation }) => {
 
   const { user: authUser, token } = useAuth();
 
+  console.log('[SettingsScreen] Renderizando - token:', !!token, 'authUser:', !!authUser);
+
   if (!token || !authUser) {
+    console.log('[SettingsScreen] Sem token ou authUser, retornando null');
     return null;
   }
 
   const handleLogout = async () => {
+    console.log('[SettingsScreen] handleLogout chamado');
     Alert.alert(
-      'Sair',
-      'Tem certeza que deseja sair da aplicação?',
+      'Trocar usuário',
+      'Deseja voltar para o login para entrar com outro usuário?',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
-          text: 'Sair',
+          text: 'Voltar ao login',
           onPress: async () => {
+            console.log('[SettingsScreen] Botão Voltar ao login pressionado');
             try {
-              await logout();
+              await logoutToLogin();
+              console.log('[SettingsScreen] logoutToLogin concluído');
             } catch (error) {
+              console.error('[SettingsScreen] Erro ao fazer logout:', error);
               Alert.alert('Erro', 'Erro ao fazer logout');
             }
           },
@@ -53,114 +60,118 @@ const SettingsScreen = ({ navigation }) => {
       </View>
 
       <View style={styles.content}>
-        {/* Informações do Usuário */}
-        <Card>
-          <Text style={styles.sectionTitle}>👤 Seu Perfil</Text>
-          <View style={styles.infoBox}>
-            <Text style={styles.infoLabel}>Nome do Cliente</Text>
-            <Text style={styles.infoValue}>{accessKey?.clientName || user?.name || 'N/A'}</Text>
-          </View>
-          <View style={styles.infoBox}>
-            <Text style={styles.infoLabel}>Empresa</Text>
-            <Text style={styles.infoValue}>{accessKey?.companyName || company?.company_name || 'N/A'}</Text>
-          </View>
-          <View style={styles.infoBox}>
-            <Text style={styles.infoLabel}>Apelido (Usuário)</Text>
-            <Text style={styles.infoValue}>{user?.nickname}</Text>
-          </View>
-          <View style={styles.infoBox}>
-            <Text style={styles.infoLabel}>Tipo de Usuário</Text>
-            <Text style={[styles.infoValue, { textTransform: 'capitalize' }]}>{user?.role === 'admin' ? 'Administrador' : 'Operador'}</Text>
-          </View>
-          <Button
-            title="✏️ Ver Perfil Completo"
-            onPress={() => navigation.navigate('EditProfileScreen')}
-            variant="secondary"
-          />
-        </Card>
+        {/* Informações do Usuário (apenas admin) */}
+        {user?.role === 'admin' && (
+          <Card>
+            <Text style={styles.sectionTitle}>👤 Seu Perfil</Text>
+            <View style={styles.infoBox}>
+              <Text style={styles.infoLabel}>Nome do Cliente</Text>
+              <Text style={styles.infoValue}>{accessKey?.clientName || user?.name || 'N/A'}</Text>
+            </View>
+            <View style={styles.infoBox}>
+              <Text style={styles.infoLabel}>Empresa</Text>
+              <Text style={styles.infoValue}>{accessKey?.companyName || company?.company_name || 'N/A'}</Text>
+            </View>
+            <View style={styles.infoBox}>
+              <Text style={styles.infoLabel}>Apelido (Usuário)</Text>
+              <Text style={styles.infoValue}>{user?.nickname}</Text>
+            </View>
+            <View style={styles.infoBox}>
+              <Text style={styles.infoLabel}>Tipo de Usuário</Text>
+              <Text style={[styles.infoValue, { textTransform: 'capitalize' }]}>{user?.role === 'admin' ? 'Administrador' : 'Operador'}</Text>
+            </View>
+            <Button
+              title="✏️ Ver Perfil Completo"
+              onPress={() => navigation.navigate('EditProfileScreen')}
+              variant="secondary"
+            />
+          </Card>
+        )}
 
-        {/* Configuração de Pagamento */}
-        <Card>
-          <Text style={styles.sectionTitle}>💳 Modo de Pagamento</Text>
-          {paymentLoading ? (
-            <ActivityIndicator size="small" color="#007AFF" />
-          ) : editMode ? (
-            <>
-              <Text style={styles.label}>Selecione o Modo</Text>
-              <View style={{ flexDirection: 'row', marginBottom: 10, gap: 8 }}>
-                <TouchableOpacity
-                  style={[styles.modeButton, localMode === 'pago' && styles.modeButtonActive]}
-                  onPress={() => setLocalMode('pago')}
-                >
-                  <Text style={[styles.modeButtonText, localMode === 'pago' && styles.modeButtonTextActive]}>💳 Pago</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modeButton, localMode === 'gratuito' && styles.modeButtonActive]}
-                  onPress={() => setLocalMode('gratuito')}
-                >
-                  <Text style={[styles.modeButtonText, localMode === 'gratuito' && styles.modeButtonTextActive]}>🆓 Gratuito</Text>
-                </TouchableOpacity>
-              </View>
-              {localMode === 'pago' && (
-                <>
-                  <Text style={styles.label}>Valor por Hora (R$)</Text>
-                  <TextInput
-                    style={styles.input}
-                    keyboardType="decimal-pad"
-                    value={localHour}
-                    onChangeText={setLocalHour}
-                    placeholder="Ex: 10.00"
+        {/* Configuração de Pagamento (apenas admin) */}
+        {user?.role === 'admin' && (
+          <Card>
+            <Text style={styles.sectionTitle}>💳 Modo de Pagamento</Text>
+            {paymentLoading ? (
+              <ActivityIndicator size="small" color="#007AFF" />
+            ) : editMode ? (
+              <>
+                <Text style={styles.label}>Selecione o Modo</Text>
+                <View style={{ flexDirection: 'row', marginBottom: 10, gap: 8 }}>
+                  <TouchableOpacity
+                    style={[styles.modeButton, localMode === 'pago' && styles.modeButtonActive]}
+                    onPress={() => setLocalMode('pago')}
+                  >
+                    <Text style={[styles.modeButtonText, localMode === 'pago' && styles.modeButtonTextActive]}>💳 Pago</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modeButton, localMode === 'gratuito' && styles.modeButtonActive]}
+                    onPress={() => setLocalMode('gratuito')}
+                  >
+                    <Text style={[styles.modeButtonText, localMode === 'gratuito' && styles.modeButtonTextActive]}>🆓 Gratuito</Text>
+                  </TouchableOpacity>
+                </View>
+                {localMode === 'pago' && (
+                  <>
+                    <Text style={styles.label}>Valor por Hora (R$)</Text>
+                    <TextInput
+                      style={styles.input}
+                      keyboardType="decimal-pad"
+                      value={localHour}
+                      onChangeText={setLocalHour}
+                      placeholder="Ex: 10.00"
+                    />
+                    <Text style={styles.label}>Valor por Dia (R$)</Text>
+                    <TextInput
+                      style={styles.input}
+                      keyboardType="decimal-pad"
+                      value={localDay}
+                      onChangeText={setLocalDay}
+                      placeholder="Ex: 50.00"
+                    />
+                  </>
+                )}
+                <View style={{ marginTop: 15, gap: 8 }}>
+                  <Button
+                    title={paymentSaving ? "Salvando..." : "Salvar Alterações"}
+                    onPress={async () => {
+                      await saveSettings(localMode, localHour, localDay);
+                      setEditMode(false);
+                    }}
+                    loading={paymentSaving}
+                    disabled={paymentSaving}
                   />
-                  <Text style={styles.label}>Valor por Dia (R$)</Text>
-                  <TextInput
-                    style={styles.input}
-                    keyboardType="decimal-pad"
-                    value={localDay}
-                    onChangeText={setLocalDay}
-                    placeholder="Ex: 50.00"
+                  <Button
+                    title="Cancelar"
+                    onPress={() => {
+                      setLocalMode(mode);
+                      setLocalHour(hourValue);
+                      setLocalDay(dayValue);
+                      setEditMode(false);
+                    }}
+                    variant="secondary"
                   />
-                </>
-              )}
-              <View style={{ marginTop: 15, gap: 8 }}>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.infoBox}>
+                  <Text style={styles.infoLabel}>Modo Atual</Text>
+                  <Text style={styles.infoValue}>
+                    {mode === 'pago'
+                      ? `💳 PAGO (R$ ${hourValue}/hora, R$ ${dayValue}/dia)`
+                      : '🆓 GRATUITO'}
+                  </Text>
+                </View>
                 <Button
-                  title={paymentSaving ? "Salvando..." : "Salvar Alterações"}
-                  onPress={async () => {
-                    await saveSettings(localMode, localHour, localDay);
-                    setEditMode(false);
-                  }}
-                  loading={paymentSaving}
-                  disabled={paymentSaving}
-                />
-                <Button
-                  title="Cancelar"
-                  onPress={() => {
-                    setLocalMode(mode);
-                    setLocalHour(hourValue);
-                    setLocalDay(dayValue);
-                    setEditMode(false);
-                  }}
+                  title="✏️ Editar Configurações"
+                  onPress={() => setEditMode(true)}
                   variant="secondary"
                 />
-              </View>
-            </>
-          ) : (
-            <>
-              <View style={styles.infoBox}>
-                <Text style={styles.infoLabel}>Modo Atual</Text>
-                <Text style={styles.infoValue}>
-                  {mode === 'pago'
-                    ? `💳 PAGO (R$ ${hourValue}/hora, R$ ${dayValue}/dia)`
-                    : '🆓 GRATUITO'}
-                </Text>
-              </View>
-              <Button
-                title="✏️ Editar Configurações"
-                onPress={() => setEditMode(true)}
-                variant="secondary"
-              />
-            </>
-          )}
-        </Card>
+              </>
+            )}
+          </Card>
+        )}
 
         {/* Gerenciamento de Usuários (apenas admin) */}
         {user?.role === 'admin' && (
@@ -172,26 +183,6 @@ const SettingsScreen = ({ navigation }) => {
             />
           </Card>
         )}
-
-        {/* Relatórios (apenas admin) */}
-        {user?.role === 'admin' && (
-          <Card>
-            <Text style={styles.sectionTitle}>📊 Análises</Text>
-            <Button
-              title="📊 Visualizar Relatórios"
-              onPress={() => navigation.navigate('ReportsScreen')}
-            />
-          </Card>
-        )}
-
-        {/* Reconhecer Placa */}
-        <Card>
-          <Text style={styles.sectionTitle}>📷 Ferramentas</Text>
-          <Button
-            title="📷 Reconhecer Placa por Camera"
-            onPress={() => navigation.navigate('CameraScreen')}
-          />
-        </Card>
 
         {/* Logout */}
         <Card>

@@ -14,7 +14,7 @@ const LoginScreen = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
 
   const { login } = useAuth();
-  const { accessKey } = useAccessKey();
+  const { accessKey, clearAccessKey } = useAccessKey();
 
   useEffect(() => {
     if (accessKey) {
@@ -42,6 +42,24 @@ const LoginScreen = ({ navigation }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleResetKey = async () => {
+    Alert.alert(
+      'Trocar chave',
+      'Deseja voltar e inserir uma nova chave de acesso?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Sim',
+          style: 'destructive',
+          onPress: async () => {
+            await clearAccessKey();
+            setAccessKeyCode('');
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -90,6 +108,15 @@ const LoginScreen = ({ navigation }) => {
             editable={!loading && !accessKey}
           />
         </Card>
+
+        {accessKey && (
+          <Button
+            title="Trocar chave"
+            onPress={handleResetKey}
+            variant="secondary"
+            disabled={loading}
+          />
+        )}
 
         <Button
           title="Entrar"

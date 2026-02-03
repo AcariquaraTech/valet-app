@@ -12,16 +12,21 @@ import ocrRoutes from './routes/ocrRoutes.js';
 import smsRoutes from './routes/smsRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import accessKeyRoutes from './routes/accessKeyRoutes.js';
+import clientRoutes from './routes/clientRoutes.js';
+import accessKeyAdminRoutes from './routes/accessKeyAdminRoutes.js';
 
 const app = express();
 
 // Middleware
 app.use(helmet());
-// CORS permissivo para mobile
+// CORS permissivo para mobile e admin panel
 app.use(cors({
-  origin: ['*', 'http://localhost:*', 'http://127.0.0.1:*', 'http://192.168.0.5:*'],
+  origin: (origin, callback) => {
+    // Permitir qualquer origem (útil para desenvolvimento)
+    callback(null, true);
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json({ limit: '50mb' }));
@@ -51,6 +56,10 @@ app.use('/api/ocr', authenticateToken, ocrRoutes);
 app.use('/api/sms', authenticateToken, smsRoutes);
 app.use('/api/users', authenticateToken, userRoutes);
 app.use('/api/access-keys', accessKeyRoutes);
+
+// Admin Routes (with authentication)
+app.use('/api/admin/clients', authenticateToken, clientRoutes);
+app.use('/api/admin/access-keys', authenticateToken, accessKeyAdminRoutes);
 
 // 404 Handler
 app.use((req, res) => {

@@ -32,7 +32,7 @@ export const AccessKeyProvider = ({ children }) => {
   const loadStoredAccessKey = async () => {
     try {
       setLoading(true);
-      const storedKey = await AsyncStorage.getItem('accessKey');
+      const storedKey = await AsyncStorage.getItem('accessKeyCode');
       const storedData = await AsyncStorage.getItem('accessKeyData');
 
       if (storedKey && storedData) {
@@ -118,7 +118,7 @@ export const AccessKeyProvider = ({ children }) => {
 
       if (response.data.success) {
         // Salvar chave localmente
-        await AsyncStorage.setItem('accessKey', key);
+        await AsyncStorage.setItem('accessKeyCode', key);
         await AsyncStorage.setItem(
           'accessKeyData',
           JSON.stringify(response.data.data)
@@ -172,7 +172,7 @@ export const AccessKeyProvider = ({ children }) => {
 
   const clearAccessKey = async () => {
     try {
-      await AsyncStorage.removeItem('accessKey');
+      await AsyncStorage.removeItem('accessKeyCode');
       await AsyncStorage.removeItem('accessKeyData');
       await AsyncStorage.removeItem('accessKeyLastValidation');
       setAccessKey(null);

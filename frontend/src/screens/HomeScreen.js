@@ -317,8 +317,8 @@ const HomeScreen = ({ navigation }) => {
                     <Text style={styles.vehicleDetails}>
                       Entrada: {entryTime.toLocaleTimeString('pt-BR')}
                     </Text>
-                    {(item.client_name || item.vehicle?.client?.name) && (
-                      <Text style={styles.vehicleDetails}>Cliente: {item.client_name || item.vehicle?.client?.name}</Text>
+                    {(item.vehicle?.clientName || item.client_name || item.vehicle?.client?.name) && (
+                      <Text style={styles.vehicleDetails}>Cliente: {item.vehicle?.clientName || item.client_name || item.vehicle?.client?.name}</Text>
                     )}
                     <Text style={styles.vehicleDetails}>
                       Tempo: {durationDisplay}
@@ -398,7 +398,7 @@ const HomeScreen = ({ navigation }) => {
 
                 <View style={styles.detailSection}>
                   <Text style={styles.detailLabel}>Cliente</Text>
-                  <Text style={styles.detailValue}>{selectedVehicle.client_name || selectedVehicle.vehicle?.client?.name || 'Sem informação'}</Text>
+                  <Text style={styles.detailValue}>{selectedVehicle.vehicle?.clientName || selectedVehicle.client_name || selectedVehicle.vehicle?.client?.name || 'Sem informação'}</Text>
                 </View>
 
                 <View style={styles.detailSection}>

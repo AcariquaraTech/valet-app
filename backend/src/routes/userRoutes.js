@@ -1,4 +1,5 @@
 import express from 'express';
+import bcrypt from 'bcryptjs';
 import { authorize, authenticateToken } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
 
@@ -43,21 +44,33 @@ router.get('/me', authenticateToken, async (req, res) => {
 // GET /api/users
 router.get('/', authorize('admin'), async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 20;
+    const skip = (page - 1) * limit;
+
+    const [total, users] = await Promise.all([
+      prisma.user.count(),
+      prisma.user.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          name: true,
+          nickname: true,
+          role: true,
+          phone: true,
+          email: true,
+          active: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }),
+    ]);
 
     res.json({
-      data: [
-        {
-          id: 'user-1',
-          name: 'João Silva',
-          nickname: 'joaosilva',
-          role: 'admin',
-          status: 'active',
-          last_login_at: new Date().toISOString(),
-        },
-      ],
-      total: 5,
+      data: users,
+      total,
       page,
       limit,
     });
@@ -73,21 +86,70 @@ router.get('/', authorize('admin'), async (req, res) => {
 // POST /api/users
 router.post('/', authorize('admin'), async (req, res) => {
   try {
+    const {
+      name,
+      nickname,
+      password,
+      role,
+      phone,
+      email,
+      active,
+      accessKeyId,
+      access_key_id,
+    } = req.body;
 
-    const { name, nickname, password, role, access_key_id } = req.body;
+    const keyId = accessKeyId || access_key_id || null;
 
-    if (!name || !nickname || !password || !access_key_id) {
+    if (!name || !nickname || !password) {
       return res.status(400).json({
-        error: 'Nome, nome de usuário, senha e chave de acesso são obrigatórios',
+        error: 'Nome, nome de usuário e senha são obrigatórios',
         code: 'MISSING_FIELDS',
       });
     }
 
+    const existing = await prisma.user.findUnique({
+      where: { nickname },
+    });
+
+    if (existing) {
+      return res.status(409).json({
+        error: 'Nickname já cadastrado',
+        code: 'NICKNAME_EXISTS',
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await prisma.user.create({
+      data: {
+        name,
+        nickname,
+        password: hashedPassword,
+        role: role || 'operator',
+        phone: phone || null,
+        email: email || null,
+        active: active !== undefined ? !!active : true,
+        ...(keyId && {
+          accessKeys: {
+            connect: { id: keyId },
+          },
+        }),
+      },
+      select: {
+        id: true,
+        name: true,
+        nickname: true,
+        role: true,
+        phone: true,
+        email: true,
+        active: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
     res.status(201).json({
-      id: 'user-new',
-      name,
-      nickname,
-      role: role || 'operator',
+      data: user,
     });
   } catch (error) {
     res.status(500).json({
@@ -101,13 +163,39 @@ router.post('/', authorize('admin'), async (req, res) => {
 // PUT /api/users/:userId
 router.put('/:userId', authorize('admin'), async (req, res) => {
   try {
-    const { name, role, status } = req.body;
+    const { name, role, phone, email, active, password } = req.body;
+    const { userId } = req.params;
+
+    const data = {
+      ...(name && { name }),
+      ...(role && { role }),
+      ...(phone !== undefined && { phone }),
+      ...(email !== undefined && { email }),
+      ...(active !== undefined && { active: !!active }),
+    };
+
+    if (password) {
+      data.password = await bcrypt.hash(password, 10);
+    }
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data,
+      select: {
+        id: true,
+        name: true,
+        nickname: true,
+        role: true,
+        phone: true,
+        email: true,
+        active: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
 
     res.json({
-      id: req.params.userId,
-      name,
-      role,
-      status,
+      data: user,
     });
   } catch (error) {
     res.status(500).json({
@@ -121,6 +209,12 @@ router.put('/:userId', authorize('admin'), async (req, res) => {
 // DELETE /api/users/:userId
 router.delete('/:userId', authorize('admin'), async (req, res) => {
   try {
+    const { userId } = req.params;
+
+    await prisma.user.delete({
+      where: { id: userId },
+    });
+
     res.json({
       message: 'Usuário deletado com sucesso',
     });

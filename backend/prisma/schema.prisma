@@ -10,6 +10,30 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Clients (Donos de Estacionamentos)
+model Client {
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  phone         String
+  companyName   String?
+  address       String?
+  city          String?
+  state         String?
+  zipCode       String?
+  document      String?  // CNPJ
+  contactName   String?
+  contactEmail  String?
+  contactPhone  String?
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  accessKeys AccessKey[]
+  
+  @@map("clients")
+}
+
 // Users (Admin, Operators, Clients)
 model User {
   id        String   @id @default(uuid())
@@ -17,6 +41,7 @@ model User {
   nickname  String   @unique
   password  String
   phone     String?
+  email     String?
   role      String   // 'admin', 'operator', 'client'
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -24,6 +49,7 @@ model User {
 
   vehicles       Vehicle[]      @relation("ClientVehicles")
   vehicleEntries VehicleEntry[] @relation("OperatorEntries")
+  accessKeys     AccessKey[]    @relation("UserAccessKeys")
   
   @@map("users")
 }
@@ -36,6 +62,7 @@ model Vehicle {
   color     String?
   year      Int?
   clientId  String
+  clientName String?
   clientPhone String?
   notes     String?
   createdAt DateTime @default(now())
@@ -113,18 +140,23 @@ model SystemLog {
 model AccessKey {
   id              String   @id @default(uuid())
   code            String   @unique // Chave única (ex: VALET-ABC123XYZ)
+  clientId        String   // Referência ao Client (dono do estacionamento)
   clientName      String   // Nome do cliente
   companyName     String?  // Nome da empresa do cliente
   clientEmail     String?
   clientPhone     String?
+  observations    String?
   status          String   @default("active") // 'active', 'revoked', 'expired'
-  expiresAt       DateTime // Data de expiração da mensalidade
+  expiresAt       DateTime? // Data de expiração da mensalidade
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   revokedAt       DateTime? // Quando foi revogada
   revokedReason   String?  // Motivo da revogação
   lastValidatedAt DateTime? // Última validação do app
   deviceId        String?  // ID do device que está usando
+  
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  users  User[] @relation("UserAccessKeys")
   
   @@map("access_keys")
 }
