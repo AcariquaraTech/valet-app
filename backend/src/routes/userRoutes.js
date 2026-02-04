@@ -44,29 +44,20 @@ router.get('/me', authenticateToken, async (req, res) => {
 // GET /api/user/my-team - Listar usuários da mesma chave de acesso (admin e operador)
 router.get('/my-team', authenticateToken, async (req, res) => {
   try {
-    // Busca o usuário logado com suas chaves de acesso
-    const currentUser = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      include: {
-        accessKeys: {
-          select: { id: true },
-        },
-      },
-    });
+    const valetClientId = req.user.valetClientId;
 
-    if (!currentUser || !currentUser.accessKeys || currentUser.accessKeys.length === 0) {
+    if (!valetClientId) {
       return res.json({
         success: true,
         data: [],
       });
     }
 
-    // Pega a primeira chave de acesso do usuário
-    const accessKeyId = currentUser.accessKeys[0].id;
-
-    // Busca todos os usuários vinculados à mesma chave
-    const accessKey = await prisma.accessKey.findUnique({
-      where: { id: accessKeyId },
+    // Busca todos os usuários vinculados à mesma chave de acesso
+    const accessKeys = await prisma.accessKey.findMany({
+      where: {
+        clientId: valetClientId,
+      },
       include: {
         users: {
           select: {
@@ -82,23 +73,27 @@ router.get('/my-team', authenticateToken, async (req, res) => {
       },
     });
 
-    if (!accessKey) {
-      return res.json({
-        success: true,
-        data: [],
-      });
-    }
+    // Combina todos os usuários de todas as chaves do cliente
+    const allUsers = [];
+    accessKeys.forEach((key) => {
+      allUsers.push(...key.users);
+    });
+
+    // Remove duplicatas por ID
+    const uniqueUsers = Array.from(
+      new Map(allUsers.map((u) => [u.id, u])).values()
+    );
 
     res.json({
       success: true,
-      data: accessKey.users,
+      data: uniqueUsers,
     });
   } catch (error) {
     console.error('Error in GET /my-team:', error);
     res.status(500).json({
       success: false,
-      error: 'Erro ao buscar equipe',
-      message: error.message,
+      message: 'Erro ao buscar equipe',
+      error: error.message,
     });
   }
 });
@@ -169,15 +164,48 @@ router.post('/', authorize('admin'), async (req, res) => {
       });
     }
 
-    const existing = await prisma.user.findUnique({
-      where: { nickname },
-    });
-
-    if (existing) {
-      return res.status(409).json({
-        error: 'Nickname já cadastrado',
-        code: 'NICKNAME_EXISTS',
+    // Se houver accessKeyId, buscar clientId para verificar nickname dentro do mesmo cliente
+    let clientIdToCheck = null;
+    if (keyId) {
+      const accessKey = await prisma.accessKey.findUnique({
+        where: { id: keyId },
+        select: { clientId: true },
       });
+      clientIdToCheck = accessKey?.clientId;
+    }
+
+    // Verificar se nickname já existe no mesmo cliente
+    if (clientIdToCheck) {
+      // Buscar todos os usuários vinculados às access keys deste cliente
+      const existingUsers = await prisma.user.findMany({
+        where: {
+          nickname,
+          accessKeys: {
+            some: {
+              clientId: clientIdToCheck,
+            },
+          },
+        },
+      });
+
+      if (existingUsers.length > 0) {
+        return res.status(409).json({
+          error: 'Nickname já cadastrado para este cliente',
+          code: 'NICKNAME_EXISTS',
+        });
+      }
+    } else {
+      // Se não tem clientId, faz verificação global (para compatibilidade)
+      const existing = await prisma.user.findUnique({
+        where: { nickname },
+      });
+
+      if (existing) {
+        return res.status(409).json({
+          error: 'Nickname já cadastrado',
+          code: 'NICKNAME_EXISTS',
+        });
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);

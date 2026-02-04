@@ -17,6 +17,15 @@ export const registerEntry = async (req, res) => {
       observations = req.body.observation,
     } = req.body;
     const operatorId = req.user.id;
+    const valetClientId = req.user.valetClientId;
+
+    // Validar valetClientId
+    if (!valetClientId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Usuário não está associado a um valet. Entre em contato com o administrador.',
+      });
+    }
 
     // Validar plate
     if (!plate) {
@@ -26,9 +35,12 @@ export const registerEntry = async (req, res) => {
       });
     }
 
-    // Check if vehicle exists
-    let vehicle = await prisma.vehicle.findUnique({
-      where: { plate },
+    // Check if vehicle exists FOR THIS VALET
+    let vehicle = await prisma.vehicle.findFirst({
+      where: { 
+        plate,
+        valetClientId, // ISOLAMENTO: apenas veículos deste valet
+      },
     });
 
     // Se o veículo existe, verifica se já tem uma entrada ativa (não saída)
@@ -36,6 +48,7 @@ export const registerEntry = async (req, res) => {
       const activeEntry = await prisma.vehicleEntry.findFirst({
         where: {
           vehicleId: vehicle.id,
+          valetClientId, // ISOLAMENTO
           status: 'parked',
         },
       });
@@ -58,6 +71,7 @@ export const registerEntry = async (req, res) => {
           clientId: operatorId, // Using operator as temporary client
           clientName: clientName || null,
           clientPhone: clientPhone || null,
+          valetClientId, // ISOLAMENTO: vincula ao valet
         },
       });
     } else if ((clientName && vehicle.clientName !== clientName) || (clientPhone && vehicle.clientPhone !== clientPhone)) {
@@ -75,6 +89,7 @@ export const registerEntry = async (req, res) => {
       data: {
         vehicleId: vehicle.id,
         operatorId,
+        valetClientId, // ISOLAMENTO: vincula ao valet
         spotNumber,
         observations,
         status: 'parked',
@@ -118,10 +133,21 @@ export const registerEntry = async (req, res) => {
 export const registerExit = async (req, res) => {
   try {
     const { entryId, totalPrice } = req.body;
+    const valetClientId = req.user.valetClientId;
 
-    // Find entry
-    const entry = await prisma.vehicleEntry.findUnique({
-      where: { id: entryId },
+    if (!valetClientId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Usuário não está associado a um valet',
+      });
+    }
+
+    // Find entry FOR THIS VALET
+    const entry = await prisma.vehicleEntry.findFirst({
+      where: { 
+        id: entryId,
+        valetClientId, // ISOLAMENTO: apenas entradas deste valet
+      },
       include: {
         vehicle: true,
       },
@@ -188,9 +214,19 @@ export const registerExit = async (req, res) => {
 // List parked vehicles
 export const listParkedVehicles = async (req, res) => {
   try {
+    const valetClientId = req.user.valetClientId;
+
+    if (!valetClientId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Usuário não está associado a um valet',
+      });
+    }
+
     const entries = await prisma.vehicleEntry.findMany({
       where: {
         status: 'parked',
+        valetClientId, // ISOLAMENTO: apenas entradas deste valet
       },
       include: {
         vehicle: true,
@@ -225,9 +261,20 @@ export const listParkedVehicles = async (req, res) => {
 export const getVehicleEntryDetails = async (req, res) => {
   try {
     const { id } = req.params;
+    const valetClientId = req.user.valetClientId;
 
-    const entry = await prisma.vehicleEntry.findUnique({
-      where: { id },
+    if (!valetClientId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Usuário não está associado a um valet',
+      });
+    }
+
+    const entry = await prisma.vehicleEntry.findFirst({
+      where: { 
+        id,
+        valetClientId, // ISOLAMENTO: apenas entradas deste valet
+      },
       include: {
         vehicle: {
           include: {

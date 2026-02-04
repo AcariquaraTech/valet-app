@@ -34,13 +34,13 @@ export default function ClientDetailsModal({ client, onClose, onRefresh }) {
 
     const loadUsers = async () => {
       try {
-        const [keyUsersRes, usersRes] = await Promise.all([
+        const [keyUsersRes, availableUsersRes] = await Promise.all([
           accessKeyService.getKeyUsers(client.id),
-          userService.listUsers(),
+          accessKeyService.getAvailableUsers(client.id),
         ]);
 
         setUsers(keyUsersRes.data || []);
-        setAllUsers(usersRes.data || []);
+        setAllUsers(availableUsersRes.data || []);
       } catch (error) {
         console.error('Erro ao carregar usuários:', error);
       }
@@ -111,8 +111,12 @@ export default function ClientDetailsModal({ client, onClose, onRefresh }) {
     setLoading(true);
     try {
       await accessKeyService.bindUserToKey(client.id, selectedUserId);
-      const keyUsersRes = await accessKeyService.getKeyUsers(client.id);
+      const [keyUsersRes, availableUsersRes] = await Promise.all([
+        accessKeyService.getKeyUsers(client.id),
+        accessKeyService.getAvailableUsers(client.id),
+      ]);
       setUsers(keyUsersRes.data || []);
+      setAllUsers(availableUsersRes.data || []);
       setSelectedUserId('');
       alert('Usuário vinculado com sucesso');
     } catch (error) {
@@ -127,8 +131,12 @@ export default function ClientDetailsModal({ client, onClose, onRefresh }) {
     setLoading(true);
     try {
       await accessKeyService.unbindUserFromKey(client.id, userId);
-      const keyUsersRes = await accessKeyService.getKeyUsers(client.id);
+      const [keyUsersRes, availableUsersRes] = await Promise.all([
+        accessKeyService.getKeyUsers(client.id),
+        accessKeyService.getAvailableUsers(client.id),
+      ]);
       setUsers(keyUsersRes.data || []);
+      setAllUsers(availableUsersRes.data || []);
       alert('Usuário desvinculado com sucesso');
     } catch (error) {
       alert('Erro ao desvincular: ' + (error.response?.data?.error || error.message));
@@ -150,13 +158,13 @@ export default function ClientDetailsModal({ client, onClose, onRefresh }) {
         accessKeyId: client.id,
       });
 
-      const [keyUsersRes, usersRes] = await Promise.all([
+      const [keyUsersRes, availableUsersRes] = await Promise.all([
         accessKeyService.getKeyUsers(client.id),
-        userService.listUsers(),
+        accessKeyService.getAvailableUsers(client.id),
       ]);
 
       setUsers(keyUsersRes.data || []);
-      setAllUsers(usersRes.data || []);
+      setAllUsers(availableUsersRes.data || []);
       setNewUser({
         name: '',
         nickname: '',

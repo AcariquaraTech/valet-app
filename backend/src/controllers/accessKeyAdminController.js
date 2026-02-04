@@ -430,3 +430,69 @@ export const renewKey = async (req, res) => {
     });
   }
 };
+
+// Obter usuários disponíveis para vincular (usuários livres + usuários do mesmo cliente)
+export const getAvailableUsers = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Buscar a access key para obter o clientId
+    const accessKey = await prisma.accessKey.findUnique({
+      where: { id },
+      select: { clientId: true },
+    });
+
+    if (!accessKey) {
+      return res.status(404).json({
+        success: false,
+        error: 'Chave de acesso não encontrada',
+      });
+    }
+
+    // Buscar todos os usuários
+    const allUsers = await prisma.user.findMany({
+      select: {
+        id: true,
+        nickname: true,
+        name: true,
+        phone: true,
+        email: true,
+        role: true,
+        active: true,
+        accessKeys: {
+          select: {
+            clientId: true,
+          },
+        },
+      },
+    });
+
+    // Filtrar:
+    // 1. Usuários sem access keys (livres)
+    // 2. Usuários vinculados a access keys do mesmo cliente
+    const availableUsers = allUsers.filter((user) => {
+      if (user.accessKeys.length === 0) {
+        return true; // Usuário livre
+      }
+      // Verifica se pelo menos uma das access keys do usuário pertence ao mesmo cliente
+      return user.accessKeys.some((ak) => ak.clientId === accessKey.clientId);
+    });
+
+    // Remover o campo accessKeys do retorno
+    const cleanedUsers = availableUsers.map((user) => {
+      const { accessKeys, ...userWithoutKeys } = user;
+      return userWithoutKeys;
+    });
+
+    res.json({
+      success: true,
+      data: cleanedUsers,
+    });
+  } catch (error) {
+    console.error('Error getting available users:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao obter usuários disponíveis',
+    });
+  }
+};

@@ -8,11 +8,11 @@ import crypto from 'crypto';
  */
 export const generateAccessKey = async (req, res) => {
   try {
-    const { clientName, clientEmail, clientPhone, expiresAt } = req.body;
+    const { clientId, clientName, clientEmail, clientPhone, expiresAt } = req.body;
 
-    if (!clientName || !expiresAt) {
+    if (!clientId || !clientName || !expiresAt) {
       return res.status(400).json({
-        error: 'Nome do cliente e data de expiração são obrigatórios',
+        error: 'ID do cliente, nome do cliente e data de expiração são obrigatórios',
       });
     }
 
@@ -24,13 +24,26 @@ export const generateAccessKey = async (req, res) => {
       });
     }
 
+    // Verificar se o cliente existe
+    const client = await prisma.client.findUnique({
+      where: { id: clientId },
+    });
+
+    if (!client) {
+      return res.status(404).json({
+        error: 'Cliente não encontrado',
+      });
+    }
+
     // Gerar código único
     const code = generateAccessKeyCode();
 
     const accessKey = await prisma.accessKey.create({
       data: {
         code,
+        clientId, // ISOLAMENTO: vincula ao cliente (valet)
         clientName,
+        companyName: client.companyName,
         clientEmail,
         clientPhone,
         expiresAt: expireDate,

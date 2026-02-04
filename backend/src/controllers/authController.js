@@ -166,22 +166,16 @@ export const login = async (req, res) => {
       });
     }
 
-    // Generate JWT
-    const token = jwt.sign(
-      { id: user.id, nickname: user.nickname, role: user.role },
-      process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-    );
-    console.log('[LOGIN] Token gerado:', token);
-
-    // Buscar dados da AccessKey (vinculada ao cliente)
+    // Buscar dados da AccessKey (vinculada ao cliente) - DEVE VIR ANTES do JWT
     let accessKeyData = null;
+    let valetClientId = null;
     if (accessKeyCode) {
       accessKeyData = await prisma.accessKey.findUnique({
         where: { code: accessKeyCode },
         select: { 
           id: true,
           code: true,
+          clientId: true,
           clientName: true,
           companyName: true,
           clientEmail: true,
@@ -190,7 +184,16 @@ export const login = async (req, res) => {
           expiresAt: true,
         },
       });
+      valetClientId = accessKeyData?.clientId;
     }
+
+    // Generate JWT (AGORA valetClientId está definida)
+    const token = jwt.sign(
+      { id: user.id, nickname: user.nickname, role: user.role, valetClientId },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    );
+    console.log('[LOGIN] Token gerado:', token);
 
     console.log('[LOGIN] Login realizado com sucesso, retornando dados e token');
     res.json({
@@ -202,6 +205,7 @@ export const login = async (req, res) => {
           name: user.name,
           nickname: user.nickname,
           role: user.role,
+          valetClientId, // Adiciona o ID do valet ao usuário
         },
         token,
         accessKey: accessKeyData,

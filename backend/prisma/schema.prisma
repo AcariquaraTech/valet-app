@@ -29,7 +29,9 @@ model Client {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  accessKeys AccessKey[]
+  accessKeys    AccessKey[]     @relation
+  vehicles      Vehicle[]       @relation("ValetVehicles")
+  vehicleEntries VehicleEntry[] @relation("ValetEntries")
   
   @@map("clients")
 }
@@ -56,20 +58,23 @@ model User {
 
 // Vehicles
 model Vehicle {
-  id        String   @id @default(uuid())
-  plate     String   @unique
-  model     String?
-  color     String?
-  year      Int?
-  clientId  String
-  clientName String?
-  clientPhone String?
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(uuid())
+  vehicleNumber Int?     // Número sequencial para identificação
+  plate         String   @unique
+  model         String?
+  color         String?
+  year          Int?
+  clientId      String   // Dono do veículo (User)
+  clientName    String?
+  clientPhone   String?
+  notes         String?
+  valetClientId String   // ID do Cliente Valet (isolamento multi-tenant)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  client  User           @relation("ClientVehicles", fields: [clientId], references: [id])
-  entries VehicleEntry[]
+  client      User           @relation("ClientVehicles", fields: [clientId], references: [id])
+  valetClient Client         @relation("ValetVehicles", fields: [valetClientId], references: [id], onDelete: Cascade)
+  entries     VehicleEntry[]
   
   @@map("vehicles")
 }
@@ -77,8 +82,10 @@ model Vehicle {
 // Vehicle Entries and Exits
 model VehicleEntry {
   id            String    @id @default(uuid())
+  entryNumber   Int?      // Número sequencial da entrada
   vehicleId     String
   operatorId    String
+  valetClientId String    // ID do Cliente Valet (isolamento multi-tenant)
   entryTime     DateTime  @default(now())
   exitTime      DateTime?
   spotNumber    String?
@@ -88,8 +95,9 @@ model VehicleEntry {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  vehicle   Vehicle @relation(fields: [vehicleId], references: [id])
-  operator  User    @relation("OperatorEntries", fields: [operatorId], references: [id])
+  vehicle     Vehicle @relation(fields: [vehicleId], references: [id])
+  operator    User    @relation("OperatorEntries", fields: [operatorId], references: [id])
+  valetClient Client  @relation("ValetEntries", fields: [valetClientId], references: [id], onDelete: Cascade)
   
   @@map("vehicle_entries")
 }

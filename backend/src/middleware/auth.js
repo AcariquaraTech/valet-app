@@ -15,6 +15,12 @@ export const authenticateToken = (req, res, next) => {
     const decoded = verifyToken(token);
     console.log('[MIDDLEWARE] Token decodificado:', decoded);
     req.user = decoded;
+    
+    // Garantir que valetClientId está disponível
+    if (!req.user.valetClientId) {
+      console.warn('[MIDDLEWARE] AVISO: usuário sem valetClientId, pode causar problemas de isolamento');
+    }
+    
     next();
   } catch (error) {
     console.log('[MIDDLEWARE] Token inválido ou expirado:', error.message);

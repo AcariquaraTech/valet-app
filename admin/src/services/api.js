@@ -131,6 +131,14 @@ export const accessKeyService = {
     return response.data;
   },
 
+  // Obter usuários disponíveis para vincular (livres + mesmo cliente)
+  getAvailableUsers: async (keyId) => {
+    const response = await axios.get(`${API_BASE_URL}/access-keys/${keyId}/available-users`, {
+      headers: getAuthHeader(),
+    });
+    return response.data;
+  },
+
   // Ativar chave
   activateKey: async (id) => {
     const response = await axios.patch(

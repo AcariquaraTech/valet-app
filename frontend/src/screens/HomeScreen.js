@@ -63,8 +63,8 @@ const HomeScreen = ({ navigation }) => {
   const testInvalidToken = async () => {
     await forceInvalidToken();
     try {
-      // Tenta acessar um endpoint protegido (ex: /user/me)
-      await apiClient.get('/user/me');
+      // Tenta acessar um endpoint protegido (ex: /users/me)
+      await apiClient.get('/users/me');
       Alert.alert('Falha', 'Token inválido NÃO foi rejeitado!');
     } catch (err) {
       Alert.alert('Sucesso', 'Token inválido rejeitado e usuário deslogado!');

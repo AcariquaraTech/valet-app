@@ -1,11 +1,11 @@
 import express from 'express';
-import { authenticateToken, authorize } from '../middleware/auth.js';
+import { authorize } from '../middleware/auth.js';
 import * as clientController from '../controllers/clientController.js';
 
 const router = express.Router();
 
-// Middleware de autenticação e autorização (somente admin)
-router.use(authenticateToken, authorize('admin'));
+// Middleware de autorização (somente admin) - autenticação já aplicada no app.js
+router.use(authorize('admin'));
 
 // CRUD de Clientes (Donos de Estacionamentos)
 router.get('/', clientController.listClients);

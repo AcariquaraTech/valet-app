@@ -1,31 +1,211 @@
 import express from 'express';
 import { authorize } from '../middleware/auth.js';
+import prisma from '../lib/prisma.js';
+
+const toDateOnly = (date) => date.toISOString().split('T')[0];
+
+// Funções que respeitam o timezone LOCAL do sistema
+const startOfDay = (date) => {
+  const d = new Date(date);
+  // Criar nova data no timezone local, com hora 00:00:00
+  const year = d.getFullYear();
+  const month = d.getMonth();
+  const day = d.getDate();
+  const result = new Date(year, month, day, 0, 0, 0, 0);
+  console.log('[startOfDay] Input:', d.toISOString(), 'Output:', result.toISOString(), 'Local:', result.toString());
+  return result;
+};
+
+const endOfDay = (date) => {
+  const d = new Date(date);
+  // Criar nova data no timezone local, com hora 23:59:59
+  const year = d.getFullYear();
+  const month = d.getMonth();
+  const day = d.getDate();
+  const result = new Date(year, month, day, 23, 59, 59, 999);
+  console.log('[endOfDay] Input:', d.toISOString(), 'Output:', result.toISOString(), 'Local:', result.toString());
+  return result;
+};
+
+const safeDate = (value, fallback) => {
+  if (!value) return fallback;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? fallback : parsed;
+};
 
 const router = express.Router();
 
 // GET /api/reports/daily-movement
 router.get('/daily-movement', authorize('admin'), async (req, res) => {
   try {
-    const date = req.query.date || new Date().toISOString().split('T')[0];
+    const valetClientId = req.user.valetClientId;
+    
+    if (!valetClientId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Usuário não está associado a um valet',
+      });
+    }
+
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0, 10);
+    
+    // Determinar se é período ou apenas hoje
+    // Se start_date === end_date === hoje, então é "Hoje" (não é período)
+    let start, end, date;
+    
+    if (req.query.start_date && req.query.end_date) {
+      const startDateStr = req.query.start_date;
+      const endDateStr = req.query.end_date;
+      
+      // Se start === end === hoje, usar apenas hoje (modo "Hoje")
+      if (startDateStr === endDateStr && startDateStr === todayStr) {
+        const queryDate = today;
+        date = toDateOnly(queryDate);
+        start = startOfDay(queryDate);
+        end = endOfDay(queryDate);
+      } else {
+        // Período customizado (7 dias, 30 dias, etc)
+        start = startOfDay(new Date(startDateStr));
+        end = endOfDay(new Date(endDateStr));
+        date = `${startDateStr} a ${endDateStr}`;
+      }
+    } else {
+      // Apenas hoje (padrão, sem parâmetros)
+      const queryDate = today;
+      date = toDateOnly(queryDate);
+      start = startOfDay(queryDate);
+      end = endOfDay(queryDate);
+    }
+
+    const [entriesCount, exitsCount, parkedCount, entries, exits] = await Promise.all([
+      prisma.vehicleEntry.count({
+        where: {
+          entryTime: { gte: start, lte: end },
+          valetClientId, // ISOLAMENTO
+        },
+      }),
+      prisma.vehicleEntry.count({
+        where: {
+          exitTime: { gte: start, lte: end },
+          valetClientId, // ISOLAMENTO
+        },
+      }),
+      prisma.vehicleEntry.count({
+        where: {
+          status: 'parked',
+          valetClientId, // ISOLAMENTO
+        },
+      }),
+      prisma.vehicleEntry.findMany({
+        where: {
+          entryTime: { gte: start, lte: end },
+          valetClientId, // ISOLAMENTO
+        },
+        select: {
+          id: true,
+          entryTime: true,
+          vehicleId: true,
+        },
+      }),
+      prisma.vehicleEntry.findMany({
+        where: {
+          exitTime: { gte: start, lte: end },
+          valetClientId, // ISOLAMENTO
+        },
+        select: {
+          entryTime: true,
+          exitTime: true,
+        },
+      }),
+    ]);
+
+    const uniqueVehicles = new Set(entries.map((item) => item.vehicleId)).size;
+
+    const durations = exits
+      .filter((item) => item.exitTime)
+      .map((item) => (item.exitTime.getTime() - item.entryTime.getTime()) / 60000);
+    const avgDuration = durations.length
+      ? Math.round(durations.reduce((sum, value) => sum + value, 0) / durations.length)
+      : 0;
+
+    const entriesByHour = Array.from({ length: 24 }, (_, hour) => ({
+      hour,
+      entries: 0,
+    }));
+    entries.forEach((item) => {
+      const hour = item.entryTime.getHours();
+      entriesByHour[hour].entries += 1;
+    });
+
+    const peakHour = entriesByHour.reduce(
+      (max, item) => (item.entries > max.entries ? item : max),
+      { hour: 0, entries: 0 }
+    ).hour;
+
+    console.log('[DEBUG] Daily Movement Stats:', {
+      entriesCount,
+      exitsCount,
+      parkedCount,
+      uniqueVehicles,
+      avgDuration,
+      peakHour,
+      dateRange: { start: start.toISOString(), end: end.toISOString() },
+      entriesFound: entries.length,
+      exitsFound: exits.length,
+    });
+
+    let history = [];
+    const startDateQuery = safeDate(req.query.start_date, null);
+    const endDateQuery = safeDate(req.query.end_date, null);
+
+    if (startDateQuery || endDateQuery) {
+      const rangeStart = startDateQuery ? startOfDay(startDateQuery) : startOfDay(queryDate);
+      const rangeEnd = endDateQuery ? endOfDay(endDateQuery) : endOfDay(queryDate);
+
+      const [entriesByDay, exitsByDay] = await Promise.all([
+        prisma.$queryRaw`
+          SELECT strftime('%Y-%m-%d', entryTime) as day, COUNT(*) as entries
+          FROM vehicle_entries
+          WHERE entryTime BETWEEN ${rangeStart} AND ${rangeEnd}
+          AND valetClientId = ${valetClientId}
+          GROUP BY day
+          ORDER BY day ASC
+        `,
+        prisma.$queryRaw`
+          SELECT strftime('%Y-%m-%d', exitTime) as day, COUNT(*) as exits
+          FROM vehicle_entries
+          WHERE exitTime BETWEEN ${rangeStart} AND ${rangeEnd}
+          AND valetClientId = ${valetClientId}
+          GROUP BY day
+          ORDER BY day ASC
+        `,
+      ]);
+
+      const daysMap = new Map();
+      entriesByDay.forEach((row) => {
+        daysMap.set(row.day, { date: row.day, entries: Number(row.entries), exits: 0 });
+      });
+      exitsByDay.forEach((row) => {
+        const existing = daysMap.get(row.day) || { date: row.day, entries: 0, exits: 0 };
+        existing.exits = Number(row.exits);
+        daysMap.set(row.day, existing);
+      });
+      history = Array.from(daysMap.values());
+    }
 
     res.json({
       date,
-      total_entries: 45,
-      total_exits: 42,
-      currently_parked: 3,
-      unique_vehicles: 45,
-      avg_parking_duration: 128,
-      peak_hour: 12,
-      movements: [
-        {
-          id: 'movement-1',
-          plate: 'ABC-1234',
-          movement_type: 'entry',
-          time: new Date().toISOString(),
-          user: 'João Silva',
-          client_name: 'João',
-        },
-      ],
+      summary: {
+        total_entries: entriesCount,
+        total_exits: exitsCount,
+        currently_parked: parkedCount,
+        unique_vehicles: uniqueVehicles,
+        avg_parking_duration_minutes: avgDuration,
+        peak_hour: peakHour,
+        entries_by_hour: entriesByHour,
+      },
+      history,
     });
   } catch (error) {
     res.status(500).json({
@@ -39,26 +219,175 @@ router.get('/daily-movement', authorize('admin'), async (req, res) => {
 // GET /api/reports/peak-hours
 router.get('/peak-hours', authorize('admin'), async (req, res) => {
   try {
-    const days = parseInt(req.query.days) || 7;
+    const valetClientId = req.user.valetClientId;
+    
+    if (!valetClientId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Usuário não está associado a um valet',
+      });
+    }
+
+    const groupBy = req.query.group_by || 'hour';
+    const days = parseInt(req.query.days, 10) || 7;
+    // Sempre usar data do servidor (não do cliente) para evitar problemas de timezone
+    const today = new Date();
+    
+    // Se o frontend enviou start_date e end_date, calcular o range baseado nisso
+    // mas sempre usando as datas no timezone do servidor
+    let rangeStart, rangeEnd;
+    
+    if (req.query.start_date && req.query.end_date) {
+      // Frontend enviou datas específicas (ex: período "today")
+      // Mas não podemos confiar na data do cliente, então calculamos baseado em "hoje"
+      const start = new Date(req.query.start_date);
+      const end = new Date(req.query.end_date);
+      
+      // Se start === end (mesmo dia), significa que quer ver apenas hoje
+      if (start.toISOString().split('T')[0] === end.toISOString().split('T')[0] &&
+          start.toISOString().split('T')[0] === today.toISOString().split('T')[0]) {
+        // Período "today" - usar apenas hoje no timezone do servidor
+        rangeStart = startOfDay(today);
+        rangeEnd = endOfDay(today);
+      } else {
+        // Período customizado - calcular os dias de diferença e aplicar no servidor
+        const diffDays = Math.ceil((end - start) / (24 * 60 * 60 * 1000)) + 1;
+        const defaultStart = new Date(today.getTime() - (diffDays - 1) * 24 * 60 * 60 * 1000);
+        rangeStart = startOfDay(defaultStart);
+        rangeEnd = endOfDay(today);
+      }
+    } else {
+      // Usar o parâmetro days (padrão: 7)
+      const defaultStart = new Date(today.getTime() - (days - 1) * 24 * 60 * 60 * 1000);
+      rangeStart = startOfDay(defaultStart);
+      rangeEnd = endOfDay(today);
+    }
+
+    console.log('[PEAK HOURS] Query params:', { start_date: req.query.start_date, end_date: req.query.end_date, group_by: groupBy });
+    console.log('[PEAK HOURS] Range:', { rangeStart: rangeStart.toISOString(), rangeEnd: rangeEnd.toISOString() });
+    
+    // Buscar todas as entradas e saídas no período
+    const [entries, exits] = await Promise.all([
+      prisma.vehicleEntry.findMany({
+        where: {
+          valetClientId,
+          entryTime: {
+            gte: rangeStart,
+            lte: rangeEnd,
+          },
+        },
+        select: {
+          entryTime: true,
+        },
+      }),
+      prisma.vehicleEntry.findMany({
+        where: {
+          valetClientId,
+          exitTime: {
+            gte: rangeStart,
+            lte: rangeEnd,
+            not: null,
+          },
+        },
+        select: {
+          exitTime: true,
+        },
+      }),
+    ]);
+
+    console.log('[reportRoutes] Entries found:', entries.length, 'Exits found:', exits.length);
+    if (entries.length > 0) {
+      console.log('[PEAK HOURS] Sample entries:', entries.slice(0, 3).map(e => ({ 
+        entryTime: e.entryTime.toISOString(), 
+        local: e.entryTime.toString() 
+      })));
+    }
+
+    // Função para extrair o label baseado no groupBy
+    // IMPORTANTE: Usa componentes de data LOCAL, não UTC
+    const getLabel = (date, groupBy) => {
+      if (!date) return null;
+      
+      const d = new Date(date);
+      if (groupBy === 'hour') {
+        // Retorna apenas a hora LOCAL: "8", "19", etc
+        return d.getHours().toString();
+      } else if (groupBy === 'day') {
+        // Retorna YYYY-MM-DD usando componentes locais
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      } else if (groupBy === 'month') {
+        // Retorna YYYY-MM
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        return `${year}-${month}`;
+      } else if (groupBy === 'year') {
+        // Retorna YYYY
+        return d.getFullYear().toString();
+      }
+      return null;
+    };
+
+    // Agrupar entries
+    const entriesMap = new Map();
+    entries.forEach((entry) => {
+      const label = getLabel(entry.entryTime, groupBy);
+      if (label) {
+        entriesMap.set(label, (entriesMap.get(label) || 0) + 1);
+      }
+    });
+
+    // Agrupar exits
+    const exitsMap = new Map();
+    exits.forEach((exit) => {
+      const label = getLabel(exit.exitTime, groupBy);
+      if (label) {
+        exitsMap.set(label, (exitsMap.get(label) || 0) + 1);
+      }
+    });
+
+    console.log('[reportRoutes] entriesMap:', Array.from(entriesMap.entries()));
+    console.log('[reportRoutes] exitsMap:', Array.from(exitsMap.entries()));
+
+    // Combinar os dados
+    const allLabels = new Set([...entriesMap.keys(), ...exitsMap.keys()]);
+    const map = new Map();
+
+    allLabels.forEach((label) => {
+      map.set(label, {
+        label,
+        entries: entriesMap.get(label) || 0,
+        exits: exitsMap.get(label) || 0,
+      });
+    });
+
+    const data = Array.from(map.values()).map((item) => ({
+      ...item,
+      total_movements: item.entries + item.exits,
+    }));
+
+    console.log('[reportRoutes] Map values before response:', Array.from(map.values()));
+    console.log('[reportRoutes] Final data with total_movements:', data);
+    console.log('[reportRoutes] Peak hours data:', { groupBy, count: data.length, samples: data.slice(0, 3) });
+
+    const highest = data.reduce(
+      (max, item) => (item.total_movements > max.total_movements ? item : max),
+      { label: null, total_movements: 0 }
+    );
+
+    const avgMovements = data.length
+      ? Math.round(data.reduce((sum, item) => sum + item.total_movements, 0) / data.length)
+      : 0;
 
     res.json({
-      period: `last_${days}_days`,
-      peak_hours: [
-        {
-          hour: 12,
-          entries: 25,
-          exits: 23,
-          total_movements: 48,
-        },
-        {
-          hour: 13,
-          entries: 22,
-          exits: 24,
-          total_movements: 46,
-        },
-      ],
-      highest_peak_hour: 12,
-      avg_movements_per_hour: 35,
+      start_date: toDateOnly(rangeStart),
+      end_date: toDateOnly(rangeEnd),
+      group_by: groupBy,
+      data,
+      highest_peak: highest.label,
+      avg_movements: avgMovements,
     });
   } catch (error) {
     res.status(500).json({
@@ -72,21 +401,67 @@ router.get('/peak-hours', authorize('admin'), async (req, res) => {
 // GET /api/reports/vehicles
 router.get('/vehicles', authorize('admin'), async (req, res) => {
   try {
-    res.json({
-      total_vehicles: 150,
-      avg_duration: 145,
-      max_duration: 480,
-      min_duration: 15,
-      vehicles: [
-        {
-          id: 'vehicle-1',
-          plate: 'ABC-1234',
-          entry_time: new Date().toISOString(),
-          exit_time: new Date().toISOString(),
-          duration: 135,
-          client_name: 'João Silva',
+    const valetClientId = req.user.valetClientId;
+    
+    if (!valetClientId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Usuário não está associado a um valet',
+      });
+    }
+
+    // Sempre usar data do servidor (não do cliente) para evitar problemas de timezone
+    const today = new Date();
+    const rangeStart = startOfDay(today);
+    const rangeEnd = endOfDay(today);
+
+    const entries = await prisma.vehicleEntry.findMany({
+      where: {
+        entryTime: { gte: rangeStart, lte: rangeEnd },
+        valetClientId, // ISOLAMENTO
+      },
+      include: {
+        vehicle: {
+          select: {
+            plate: true,
+            clientName: true,
+            vehicleNumber: true,
+          },
         },
-      ],
+      },
+      orderBy: { entryTime: 'desc' },
+      take: 100,
+    });
+
+    const durations = entries
+      .filter((entry) => entry.exitTime)
+      .map((entry) => (entry.exitTime.getTime() - entry.entryTime.getTime()) / 60000);
+
+    const avgDuration = durations.length
+      ? Math.round(durations.reduce((sum, value) => sum + value, 0) / durations.length)
+      : 0;
+    const maxDuration = durations.length ? Math.max(...durations) : 0;
+    const minDuration = durations.length ? Math.min(...durations) : 0;
+
+    res.json({
+      start_date: toDateOnly(rangeStart),
+      end_date: toDateOnly(rangeEnd),
+      total_vehicles: entries.length,
+      avg_duration_minutes: avgDuration,
+      max_duration_minutes: Math.round(maxDuration),
+      min_duration_minutes: Math.round(minDuration),
+      vehicles: entries.map((entry) => ({
+        id: entry.id,
+        vehicle_number: entry.vehicle?.vehicleNumber,
+        plate: entry.vehicle?.plate,
+        client_name: entry.vehicle?.clientName,
+        entry_time: entry.entryTime,
+        exit_time: entry.exitTime,
+        status: entry.status,
+        duration_minutes: entry.exitTime
+          ? Math.round((entry.exitTime.getTime() - entry.entryTime.getTime()) / 60000)
+          : null,
+      })),
     });
   } catch (error) {
     res.status(500).json({

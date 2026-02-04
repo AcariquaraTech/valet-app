@@ -1,53 +1,224 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, FlatList, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator, FlatList, ScrollView, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { reportService } from '../services';
 import { Card, Button } from '../components/Common';
 
 const ReportsScreen = ({ navigation }) => {
+  console.log('[ReportsScreen] RENDERIZANDO COMPONENTE');
   const [loading, setLoading] = useState(true);
-  const [daily, setDaily] = useState([]);
-  const [peak, setPeak] = useState([]);
-  const [vehicles, setVehicles] = useState([]);
+  const [daily, setDaily] = useState(null);
+  const [peak, setPeak] = useState(null);
+  const [vehicles, setVehicles] = useState(null);
   const [error, setError] = useState(null);
+  const [period, setPeriod] = useState('today');
+  const [groupBy, setGroupBy] = useState('hour');
+  
+  console.log('[ReportsScreen] Estado:', { loading, hasDaily: !!daily, hasPeak: !!peak, hasVehicles: !!vehicles, error });
 
   useFocusEffect(
     React.useCallback(() => {
       loadReports();
-    }, [])
+    }, [period, groupBy])
   );
 
+  useEffect(() => {
+    loadReports();
+  }, [period, groupBy]);
+
+  const getRange = () => {
+    const today = new Date();
+    const endDate = today.toISOString().slice(0, 10);
+    let startDate = endDate;
+
+    if (period === '7d') {
+      const d = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
+      startDate = d.toISOString().slice(0, 10);
+    }
+    if (period === '30d') {
+      const d = new Date(today.getTime() - 29 * 24 * 60 * 60 * 1000);
+      startDate = d.toISOString().slice(0, 10);
+    }
+    if (period === 'month') {
+      const d = new Date(today.getFullYear(), today.getMonth(), 1);
+      startDate = d.toISOString().slice(0, 10);
+    }
+    if (period === 'year') {
+      const d = new Date(today.getFullYear(), 0, 1);
+      startDate = d.toISOString().slice(0, 10);
+    }
+
+    return { startDate, endDate };
+  };
+
+  // Período independente para o gráfico de horários de pico
+  const getPeakRange = () => {
+    const today = new Date();
+    const endDate = today.toISOString().slice(0, 10);
+    let startDate = endDate;
+
+    // Se groupBy é 'hour', mostra últimas 24h (hoje)
+    if (groupBy === 'hour') {
+      startDate = endDate;
+    }
+    // Se groupBy é 'day', mostra últimos 7 dias
+    else if (groupBy === 'day') {
+      const d = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
+      startDate = d.toISOString().slice(0, 10);
+    }
+    // Se groupBy é 'month', mostra último ano
+    else if (groupBy === 'month') {
+      const d = new Date(today.getFullYear(), 0, 1);
+      startDate = d.toISOString().slice(0, 10);
+    }
+    // Se groupBy é 'year', mostra últimos 5 anos
+    else if (groupBy === 'year') {
+      const d = new Date(today.getFullYear() - 4, 0, 1);
+      startDate = d.toISOString().slice(0, 10);
+    }
+
+    return { startDate, endDate };
+  };
+
   const loadReports = async () => {
+    console.log('[ReportsScreen] Iniciando loadReports...');
     setLoading(true);
     setError(null);
     try {
       const today = new Date().toISOString().slice(0, 10);
-      const dailyData = await reportService.getDailyMovement(today);
-      const peakData = await reportService.getPeakHours(7);
-      const vehiclesData = await reportService.getVehiclesReport(today, today);
-      setDaily(dailyData?.data || dailyData || []);
-      setPeak(peakData?.data || peakData || []);
-      setVehicles(vehiclesData?.data || vehiclesData || []);
+      const { startDate, endDate } = getRange();
+      const { startDate: peakStartDate, endDate: peakEndDate } = getPeakRange();
+      console.log('[ReportsScreen] Range:', { 
+        today, 
+        daily: { startDate, endDate }, 
+        peak: { startDate: peakStartDate, endDate: peakEndDate },
+        period, 
+        groupBy 
+      });
+      
+      console.log('[ReportsScreen] Carregando dailyData...');
+      const dailyData = await reportService.getDailyMovement({
+        date: today,
+        startDate,
+        endDate,
+      });
+      console.log('[ReportsScreen] dailyData:', dailyData);
+      
+      console.log('[ReportsScreen] Carregando peakData...');
+      const peakData = await reportService.getPeakHours({
+        startDate: peakStartDate,
+        endDate: peakEndDate,
+        groupBy,
+      });
+      console.log('[ReportsScreen] peakData:', peakData);
+      
+      console.log('[ReportsScreen] Carregando vehiclesData...');
+      const vehiclesData = await reportService.getVehiclesReport(startDate, endDate);
+      console.log('[ReportsScreen] vehiclesData:', vehiclesData);
+      
+      setDaily(dailyData || null);
+      setPeak(peakData || null);
+      setVehicles(vehiclesData || null);
+      console.log('[ReportsScreen] Dados carregados com sucesso!');
     } catch (e) {
-      console.error('Erro ao carregar relatórios:', e);
-      setError('Erro ao carregar relatórios');
+      console.error('[ReportsScreen] ERRO ao carregar relatórios:', e);
+      console.error('[ReportsScreen] Erro detalhado:', e.message, e.response?.data);
+      setError('Erro ao carregar relatórios: ' + (e.message || 'desconhecido'));
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>📊 Relatórios</Text>
-      </View>
+  const renderSummaryItem = (label, value) => (
+    <View style={styles.summaryItem}>
+      <Text style={styles.summaryValue}>{value}</Text>
+      <Text style={styles.summaryLabel}>{label}</Text>
+    </View>
+  );
 
-      <View style={styles.content}>
-        {loading ? (
+  const renderBarChart = (data = []) => {
+    const max = Math.max(...data.map((item) => item.total_movements || 0), 1);
+    
+    // Formata o label de acordo com o tipo de agrupamento
+    const formatLabel = (label) => {
+      if (label === null || label === undefined || label === '') {
+        console.warn('[ReportsScreen] Label vazio/nulo:', label);
+        return '-';
+      }
+      
+      const labelStr = label.toString().trim();
+      if (!labelStr) return '-';
+      
+      if (groupBy === 'hour') {
+        // Label já deve ser só a hora (ex: "08")
+        return `${labelStr}h`;
+      }
+      if (groupBy === 'day') {
+        // 2026-02-03 -> 03/02
+        try {
+          const parts = labelStr.split('-');
+          if (parts.length >= 3) return `${parts[2]}/${parts[1]}`;
+          return labelStr;
+        } catch (e) {
+          console.error('[ReportsScreen] Erro ao formatar label dia:', labelStr, e);
+          return labelStr;
+        }
+      }
+      if (groupBy === 'month') {
+        // 2026-02 -> Fev/26
+        try {
+          const [year, month] = labelStr.split('-');
+          const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+          const monthName = months[parseInt(month) - 1] || '?';
+          return `${monthName}/${year.slice(2)}`;
+        } catch (e) {
+          console.error('[ReportsScreen] Erro ao formatar label mês:', labelStr, e);
+          return labelStr;
+        }
+      }
+      if (groupBy === 'year') {
+        return labelStr;
+      }
+      return labelStr;
+    };
+
+    return (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chartScroll}>
+        <View style={styles.chartContainer}>
+          {data.map((item, index) => {
+            const height = Math.round((item.total_movements / max) * 120);
+            console.log('[ReportsScreen] Renderizando item:', { label: item.label, formatted: formatLabel(item.label), movements: item.total_movements });
+            return (
+              <View key={`${item.label}-${index}`} style={styles.chartItem}>
+                <View style={styles.chartBarWrapper}>
+                  <Text style={styles.chartValue}>{item.total_movements}</Text>
+                  <View style={[styles.chartBar, { height: Math.max(height, 4) }]} />
+                </View>
+                <Text style={styles.chartLabel}>{formatLabel(item.label)}</Text>
+              </View>
+            );
+          })}
+        </View>
+      </ScrollView>
+    );
+  };
+
+  // Proteção contra renderização com dados inválidos
+  const renderSafeContent = () => {
+    try {
+      if (loading) {
+        console.log('[ReportsScreen] Renderizando LOADING');
+        return (
           <Card>
             <ActivityIndicator size="large" color="#007AFF" />
+            <Text style={{ textAlign: 'center', marginTop: 10 }}>Carregando relatórios...</Text>
           </Card>
-        ) : error ? (
+        );
+      }
+
+      if (error) {
+        console.log('[ReportsScreen] Renderizando ERRO:', error);
+        return (
           <Card>
             <Text style={styles.error}>{error}</Text>
             <Button
@@ -57,62 +228,126 @@ const ReportsScreen = ({ navigation }) => {
               style={{ marginTop: 10 }}
             />
           </Card>
-        ) : (
-          <>
-            <Card>
-              <Text style={styles.sectionTitle}>📈 Movimentação do Dia</Text>
+        );
+      }
+
+      console.log('[ReportsScreen] Renderizando DADOS - daily:', daily, 'peak:', peak);
+      
+      return (
+        <>
+          <Card>
+            <Text style={styles.sectionTitle}>📅 Período</Text>
+            <View style={styles.filterRow}>
+              {['today', '7d', '30d', 'month', 'year'].map((key) => (
+                <TouchableOpacity
+                  key={key}
+                  onPress={() => setPeriod(key)}
+                  style={[styles.filterButton, period === key && styles.filterButtonActive]}
+                >
+                  <Text style={[styles.filterButtonText, period === key && styles.filterButtonTextActive]}>
+                    {key === 'today' ? 'Hoje' : key === '7d' ? '7 dias' : key === '30d' ? '30 dias' : key === 'month' ? 'Mês' : 'Ano'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Card>
+
+          <Card>
+            <Text style={styles.sectionTitle}>📈 Movimentação do Dia</Text>
+            {daily?.summary ? (
+              <View style={styles.summaryGrid}>
+                {renderSummaryItem('No Pátio', daily.summary.currently_parked || 0)}
+                {renderSummaryItem('Entraram', daily.summary.total_entries || 0)}
+                {renderSummaryItem('Saíram', daily.summary.total_exits || 0)}
+                {renderSummaryItem('Únicos', daily.summary.unique_vehicles || 0)}
+                {renderSummaryItem('Média (min)', daily.summary.avg_parking_duration_minutes || 0)}
+                {renderSummaryItem('Pico (hora)', daily.summary.peak_hour || '-')}
+              </View>
+            ) : (
+              <Text style={styles.emptyText}>Nenhum dado disponível</Text>
+            )}
+          </Card>
+
+          <Card>
+            <Text style={styles.sectionTitle}>⏰ Horários de Pico</Text>
+            <View style={styles.filterRow}>
+              {['hour', 'day', 'month', 'year'].map((key) => (
+                <TouchableOpacity
+                  key={key}
+                  onPress={() => setGroupBy(key)}
+                  style={[styles.filterButton, groupBy === key && styles.filterButtonActive]}
+                >
+                  <Text style={[styles.filterButtonText, groupBy === key && styles.filterButtonTextActive]}>
+                    {key === 'hour' ? 'Hora' : key === 'day' ? 'Dia' : key === 'month' ? 'Mês' : 'Ano'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {peak?.data && Array.isArray(peak.data) && peak.data.length > 0 ? (
+              renderBarChart(peak.data)
+            ) : (
+              <Text style={styles.emptyText}>Nenhum dado disponível</Text>
+            )}
+          </Card>
+
+          <Card>
+            <Text style={styles.sectionTitle}>🚗 Veículos Recentes</Text>
+            {vehicles?.recent_vehicles && Array.isArray(vehicles.recent_vehicles) && vehicles.recent_vehicles.length > 0 ? (
               <FlatList
-                data={daily}
-                keyExtractor={(_, i) => 'daily-' + i}
-                scrollEnabled={false}
+                data={vehicles.recent_vehicles}
+                keyExtractor={(item, index) => `${item.plate}-${index}`}
                 renderItem={({ item }) => (
-                  <View style={styles.reportItem}>
-                    <Text style={styles.reportText}>{JSON.stringify(item, null, 2)}</Text>
+                  <View style={styles.vehicleItem}>
+                    <Text style={styles.vehiclePlate}>{item.plate || 'N/A'}</Text>
+                    <Text style={styles.vehicleInfo}>
+                      Visitas: {item.visit_count || 0} • Última: {item.last_entry ? new Date(item.last_entry).toLocaleDateString('pt-BR') : 'N/A'}
+                    </Text>
                   </View>
                 )}
-                ListEmptyComponent={<Text style={styles.emptyText}>Nenhum dado disponível</Text>}
-              />
-            </Card>
-
-            <Card>
-              <Text style={styles.sectionTitle}>⏰ Horários de Pico (7 dias)</Text>
-              <FlatList
-                data={peak}
-                keyExtractor={(_, i) => 'peak-' + i}
                 scrollEnabled={false}
-                renderItem={({ item }) => (
-                  <View style={styles.reportItem}>
-                    <Text style={styles.reportText}>{JSON.stringify(item, null, 2)}</Text>
-                  </View>
-                )}
-                ListEmptyComponent={<Text style={styles.emptyText}>Nenhum dado disponível</Text>}
               />
-            </Card>
+            ) : (
+              <Text style={styles.emptyText}>Nenhum veículo recente</Text>
+            )}
+          </Card>
 
-            <Card>
-              <Text style={styles.sectionTitle}>🚗 Relatório de Veículos</Text>
-              <FlatList
-                data={vehicles}
-                keyExtractor={(_, i) => 'vehicles-' + i}
-                scrollEnabled={false}
-                renderItem={({ item }) => (
-                  <View style={styles.reportItem}>
-                    <Text style={styles.reportText}>{JSON.stringify(item, null, 2)}</Text>
-                  </View>
-                )}
-                ListEmptyComponent={<Text style={styles.emptyText}>Nenhum dado disponível</Text>}
-              />
-            </Card>
+          <Card>
+            <Button
+              title="🔄 Recarregar Relatórios"
+              onPress={loadReports}
+              variant="secondary"
+            />
+          </Card>
+        </>
+      );
+    } catch (err) {
+      console.error('[ReportsScreen] ERRO FATAL ao renderizar:', err);
+      return (
+        <Card>
+          <Text style={styles.error}>Erro ao exibir relatórios: {err.message}</Text>
+          <Button
+            title="🔄 Recarregar"
+            onPress={() => {
+              setError(null);
+              loadReports();
+            }}
+            variant="secondary"
+            style={{ marginTop: 10 }}
+          />
+        </Card>
+      );
+    }
+  };
 
-            <Card>
-              <Button
-                title="🔄 Recarregar Relatórios"
-                onPress={loadReports}
-                variant="secondary"
-              />
-            </Card>
-          </>
-        )}
+  return (
+    <ScrollView style={styles.container}>
+      {console.log('[ReportsScreen] RETURN - loading:', loading, 'error:', error)}
+      <View style={styles.header}>
+        <Text style={styles.title}>📊 Relatórios</Text>
+      </View>
+
+      <View style={styles.content}>
+        {renderSafeContent()}
       </View>
     </ScrollView>
   );
@@ -153,11 +388,168 @@ const styles = StyleSheet.create({
     color: '#666',
     fontFamily: 'monospace',
   },
-  emptyText: {
-    textAlign: 'center',
-    color: '#999',
+  summaryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  summaryItem: {
+    width: '48%',
+    backgroundColor: '#f7f7f7',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 10,
+  },
+  summaryValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#007AFF',
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  filterButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+  },
+  filterButtonActive: {
+    backgroundColor: '#007AFF',
+  },
+  filterButtonText: {
+    fontSize: 12,
+    color: '#555',
+    fontWeight: '600',
+  },
+  filterButtonTextActive: {
+    color: '#fff',
+  },
+  chartScroll: {
+    marginTop: 12,
+  },
+  chartContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
+    paddingBottom: 8,
+  },
+  chartItem: {
+    alignItems: 'center',
+    width: 30,
+  },
+  chartBarWrapper: {
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    height: 140,
+  },
+  chartValue: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#007AFF',
+    marginBottom: 4,
+  },
+  chartBar: {
+    width: 18,
+    backgroundColor: '#007AFF',
+    borderRadius: 4,
+  },
+  chartLabel: {
+    fontSize: 10,
+    color: '#666',
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  historyRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  historyDate: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#333',
+  },
+  historyValue: {
+    fontSize: 12,
+    color: '#666',
+  },
+  vehicleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 12,
-    fontStyle: 'italic',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    backgroundColor: '#fafafa',
+    paddingHorizontal: 10,
+    marginVertical: 4,
+    borderRadius: 6,
+  },
+  vehicleInfo: {
+    flex: 1,
+  },
+  vehicleNumber: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#007AFF',
+  },
+  vehiclePlate: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#000',
+    marginTop: 2,
+    fontFamily: 'monospace',
+  },
+  vehicleClient: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  vehicleTime: {
+    alignItems: 'flex-end',
+  },
+  timeLabel: {
+    fontSize: 10,
+    color: '#999',
+    marginTop: 2,
+  },
+  timeValue: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#333',
+  },
+  duration: {
+    fontSize: 11,
+    color: '#007AFF',
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  emptyText: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
+    paddingVertical: 16,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#d32f2f',
+    textAlign: 'center',
+    padding: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   error: {
     color: '#FF3B30',

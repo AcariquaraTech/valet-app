@@ -32,7 +32,7 @@ export const authService = {
 
   validateToken: async (token) => {
     // Valida o token fazendo uma requisição simples ao backend
-    const response = await apiClient.get('/user/me', {
+    const response = await apiClient.get('/users/me', {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -78,17 +78,27 @@ export const vehicleService = {
 };
 
 export const reportService = {
-  getDailyMovement: async (date) => {
-    const response = await apiClient.get('/reports/daily-movement', {
-      params: { date },
-    });
+  getDailyMovement: async (options = {}) => {
+    const params = typeof options === 'string'
+      ? { date: options }
+      : {
+          date: options.date,
+          start_date: options.startDate,
+          end_date: options.endDate,
+        };
+    const response = await apiClient.get('/reports/daily-movement', { params });
     return response.data;
   },
 
-  getPeakHours: async (days = 7) => {
-    const response = await apiClient.get('/reports/peak-hours', {
-      params: { days },
-    });
+  getPeakHours: async (options = 7) => {
+    const params = typeof options === 'number'
+      ? { days: options }
+      : {
+          start_date: options.startDate,
+          end_date: options.endDate,
+          group_by: options.groupBy,
+        };
+    const response = await apiClient.get('/reports/peak-hours', { params });
     return response.data;
   },
 
