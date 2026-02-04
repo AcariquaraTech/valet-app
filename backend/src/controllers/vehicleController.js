@@ -106,8 +106,9 @@ export const registerEntry = async (req, res) => {
       },
     });
 
-    // Send SMS notification if phone provided
-    if (clientPhone) {
+    // Send SMS notification only if phone was explicitly provided
+    // Do NOT use operator's phone as fallback
+    if (clientPhone && clientPhone.trim() !== '') {
       await sendSMS(
         clientPhone,
         `Seu veículo placa ${plate} entrou no estacionamento às ${new Date().toLocaleTimeString('pt-BR')}`
@@ -186,14 +187,22 @@ export const registerExit = async (req, res) => {
       },
     });
 
-    // Enviar SMS para o cliente na saída, se houver telefone
-    const clientPhone = updatedEntry.vehicle?.clientPhone || updatedEntry.vehicle?.client_phone || null;
+    // Enviar SMS para o cliente na saída, se houver telefone vinculado explicitamente
+    // Nota: NÃO usar o phone do operador (clientId) como fallback
+    const clientPhone = updatedEntry.vehicle?.clientPhone || updatedEntry.vehicle?.client_phone;
     const plate = updatedEntry.vehicle?.plate;
-    if (clientPhone) {
+    
+    console.log(`[EXIT SMS DEBUG] Placa: ${plate}, ClientPhone: ${clientPhone}, Tipo: ${typeof clientPhone}`);
+    
+    // Só envia SMS se houver um telefone explicitamente vinculado ao veículo
+    if (clientPhone && clientPhone.trim() !== '') {
+      console.log(`[EXIT SMS] Enviando SMS para ${clientPhone}`);
       await sendSMS(
         clientPhone,
         `Seu veículo placa ${plate} saiu do estacionamento às ${new Date().toLocaleTimeString('pt-BR')}`
       );
+    } else {
+      console.log(`[EXIT SMS] NÃO enviando SMS - clientPhone vazio ou nulo`);
     }
 
     res.json({

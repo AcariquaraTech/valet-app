@@ -27,8 +27,28 @@ const endOfDay = (date) => {
   return result;
 };
 
+const parseDateOnlyLocal = (value) => {
+  if (!value || typeof value !== 'string') return null;
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+  return new Date(year, month, day, 0, 0, 0, 0);
+};
+
+const formatDateOnlyLocal = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const safeDate = (value, fallback) => {
   if (!value) return fallback;
+  const local = parseDateOnlyLocal(value);
+  if (local) return local;
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? fallback : parsed;
 };
@@ -48,7 +68,7 @@ router.get('/daily-movement', authorize('admin'), async (req, res) => {
     }
 
     const today = new Date();
-    const todayStr = today.toISOString().slice(0, 10);
+    const todayStr = formatDateOnlyLocal(today);
     
     // Determinar se é período ou apenas hoje
     // Se start_date === end_date === hoje, então é "Hoje" (não é período)
@@ -66,8 +86,10 @@ router.get('/daily-movement', authorize('admin'), async (req, res) => {
         end = endOfDay(queryDate);
       } else {
         // Período customizado (7 dias, 30 dias, etc)
-        start = startOfDay(new Date(startDateStr));
-        end = endOfDay(new Date(endDateStr));
+          const startDateLocal = parseDateOnlyLocal(startDateStr) || new Date(req.query.start_date);
+          const endDateLocal = parseDateOnlyLocal(endDateStr) || new Date(req.query.end_date);
+        start = startOfDay(startDateLocal);
+        end = endOfDay(endDateLocal);
         date = `${startDateStr} a ${endDateStr}`;
       }
     } else {
@@ -240,12 +262,12 @@ router.get('/peak-hours', authorize('admin'), async (req, res) => {
     if (req.query.start_date && req.query.end_date) {
       // Frontend enviou datas específicas (ex: período "today")
       // Mas não podemos confiar na data do cliente, então calculamos baseado em "hoje"
-      const start = new Date(req.query.start_date);
-      const end = new Date(req.query.end_date);
+      const start = parseDateOnlyLocal(req.query.start_date) || new Date(req.query.start_date);
+      const end = parseDateOnlyLocal(req.query.end_date) || new Date(req.query.end_date);
       
       // Se start === end (mesmo dia), significa que quer ver apenas hoje
-      if (start.toISOString().split('T')[0] === end.toISOString().split('T')[0] &&
-          start.toISOString().split('T')[0] === today.toISOString().split('T')[0]) {
+        if (formatDateOnlyLocal(start) === formatDateOnlyLocal(end) &&
+          formatDateOnlyLocal(start) === formatDateOnlyLocal(today)) {
         // Período "today" - usar apenas hoje no timezone do servidor
         rangeStart = startOfDay(today);
         rangeEnd = endOfDay(today);
@@ -365,7 +387,8 @@ router.get('/peak-hours', authorize('admin'), async (req, res) => {
 
     const data = Array.from(map.values()).map((item) => ({
       ...item,
-      total_movements: item.entries + item.exits,
+      // Horário de pico considera apenas entradas
+      total_movements: item.entries,
     }));
 
     console.log('[reportRoutes] Map values before response:', Array.from(map.values()));

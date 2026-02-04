@@ -48,7 +48,7 @@ const ParkedVehiclesScreen = ({ navigation }) => {
       const details = await vehicleService.getVehicleDetails(entryId);
       const entry = details?.entry || details?.data?.entry;
       const plate = entry?.vehicle?.plate;
-      const clientPhone = entry?.vehicle?.clientPhone || entry?.vehicle?.client_phone || entry?.vehicle?.client?.phone;
+      const clientPhone = entry?.vehicle?.clientPhone || entry?.vehicle?.client_phone;
       
       await vehicleService.registerExit(entryId, '', undefined);
       

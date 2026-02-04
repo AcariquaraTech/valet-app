@@ -26,26 +26,33 @@ const ReportsScreen = ({ navigation }) => {
     loadReports();
   }, [period, groupBy]);
 
+  const formatLocalDate = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const getRange = () => {
     const today = new Date();
-    const endDate = today.toISOString().slice(0, 10);
+    const endDate = formatLocalDate(today);
     let startDate = endDate;
 
     if (period === '7d') {
       const d = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
-      startDate = d.toISOString().slice(0, 10);
+      startDate = formatLocalDate(d);
     }
     if (period === '30d') {
       const d = new Date(today.getTime() - 29 * 24 * 60 * 60 * 1000);
-      startDate = d.toISOString().slice(0, 10);
+      startDate = formatLocalDate(d);
     }
     if (period === 'month') {
       const d = new Date(today.getFullYear(), today.getMonth(), 1);
-      startDate = d.toISOString().slice(0, 10);
+      startDate = formatLocalDate(d);
     }
     if (period === 'year') {
       const d = new Date(today.getFullYear(), 0, 1);
-      startDate = d.toISOString().slice(0, 10);
+      startDate = formatLocalDate(d);
     }
 
     return { startDate, endDate };
@@ -54,7 +61,7 @@ const ReportsScreen = ({ navigation }) => {
   // Período independente para o gráfico de horários de pico
   const getPeakRange = () => {
     const today = new Date();
-    const endDate = today.toISOString().slice(0, 10);
+    const endDate = formatLocalDate(today);
     let startDate = endDate;
 
     // Se groupBy é 'hour', mostra últimas 24h (hoje)
@@ -64,17 +71,17 @@ const ReportsScreen = ({ navigation }) => {
     // Se groupBy é 'day', mostra últimos 7 dias
     else if (groupBy === 'day') {
       const d = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
-      startDate = d.toISOString().slice(0, 10);
+      startDate = formatLocalDate(d);
     }
     // Se groupBy é 'month', mostra último ano
     else if (groupBy === 'month') {
       const d = new Date(today.getFullYear(), 0, 1);
-      startDate = d.toISOString().slice(0, 10);
+      startDate = formatLocalDate(d);
     }
     // Se groupBy é 'year', mostra últimos 5 anos
     else if (groupBy === 'year') {
       const d = new Date(today.getFullYear() - 4, 0, 1);
-      startDate = d.toISOString().slice(0, 10);
+      startDate = formatLocalDate(d);
     }
 
     return { startDate, endDate };
@@ -85,7 +92,7 @@ const ReportsScreen = ({ navigation }) => {
     setLoading(true);
     setError(null);
     try {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = formatLocalDate(new Date());
       const { startDate, endDate } = getRange();
       const { startDate: peakStartDate, endDate: peakEndDate } = getPeakRange();
       console.log('[ReportsScreen] Range:', { 
@@ -111,8 +118,7 @@ const ReportsScreen = ({ navigation }) => {
         groupBy,
       });
       console.log('[ReportsScreen] peakData:', peakData);
-      
-      console.log('[ReportsScreen] Carregando vehiclesData...');
+
       const vehiclesData = await reportService.getVehiclesReport(startDate, endDate);
       console.log('[ReportsScreen] vehiclesData:', vehiclesData);
       
@@ -232,6 +238,33 @@ const ReportsScreen = ({ navigation }) => {
       }
 
       console.log('[ReportsScreen] Renderizando DADOS - daily:', daily, 'peak:', peak);
+
+      const recentLogs = Array.isArray(vehicles?.vehicles)
+        ? vehicles.vehicles.flatMap((item) => {
+            const logs = [];
+            if (item.entry_time) {
+              logs.push({
+                type: 'Entrada',
+                time: item.entry_time,
+                plate: item.plate,
+                vehicleNumber: item.vehicle_number,
+              });
+            }
+            if (item.exit_time) {
+              logs.push({
+                type: 'Saída',
+                time: item.exit_time,
+                plate: item.plate,
+                vehicleNumber: item.vehicle_number,
+              });
+            }
+            return logs;
+          })
+        : [];
+      const recentLogsToShow = recentLogs
+        .filter((item) => item.time)
+        .sort((a, b) => new Date(b.time) - new Date(a.time))
+        .slice(0, 30);
       
       return (
         <>
@@ -292,20 +325,28 @@ const ReportsScreen = ({ navigation }) => {
 
           <Card>
             <Text style={styles.sectionTitle}>🚗 Veículos Recentes</Text>
-            {vehicles?.recent_vehicles && Array.isArray(vehicles.recent_vehicles) && vehicles.recent_vehicles.length > 0 ? (
-              <FlatList
-                data={vehicles.recent_vehicles}
-                keyExtractor={(item, index) => `${item.plate}-${index}`}
-                renderItem={({ item }) => (
-                  <View style={styles.vehicleItem}>
-                    <Text style={styles.vehiclePlate}>{item.plate || 'N/A'}</Text>
-                    <Text style={styles.vehicleInfo}>
-                      Visitas: {item.visit_count || 0} • Última: {item.last_entry ? new Date(item.last_entry).toLocaleDateString('pt-BR') : 'N/A'}
-                    </Text>
-                  </View>
-                )}
-                scrollEnabled={false}
-              />
+            {recentLogsToShow.length > 0 ? (
+              <View style={styles.recentVehiclesList}>
+                <ScrollView nestedScrollEnabled showsVerticalScrollIndicator>
+                  {recentLogsToShow.map((item, index) => (
+                    <View
+                      key={`${item.plate || 'N/A'}-${item.type}-${item.time}-${index}`}
+                      style={styles.vehicleRow}
+                    >
+                      <Text style={[
+                        styles.vehiclePlate,
+                        item.type === 'Entrada' ? styles.vehicleLogEntry : styles.vehicleLogExit,
+                      ]}>
+                        {item.plate || 'N/A'}
+                      </Text>
+                      <Text style={styles.vehicleClient}>
+                        {item.type} • {new Date(item.time).toLocaleString('pt-BR')}
+                        {item.vehicleNumber ? ` • ${item.vehicleNumber}` : ''}
+                      </Text>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
             ) : (
               <Text style={styles.emptyText}>Nenhum veículo recente</Text>
             )}
@@ -340,7 +381,7 @@ const ReportsScreen = ({ navigation }) => {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} nestedScrollEnabled>
       {console.log('[ReportsScreen] RETURN - loading:', loading, 'error:', error)}
       <View style={styles.header}>
         <Text style={styles.title}>📊 Relatórios</Text>
@@ -373,7 +414,6 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
     marginBottom: 12,
     color: '#000',
   },
@@ -510,10 +550,23 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontFamily: 'monospace',
   },
+  vehicleLogEntry: {
+    color: '#2E7D32',
+  },
+  vehicleLogExit: {
+    color: '#C62828',
+  },
   vehicleClient: {
     fontSize: 12,
     color: '#666',
     marginTop: 2,
+  },
+  recentVehiclesList: {
+    maxHeight: 240,
+    overflow: 'hidden',
+  },
+  recentVehiclesListInner: {
+    flexGrow: 0,
   },
   vehicleTime: {
     alignItems: 'flex-end',

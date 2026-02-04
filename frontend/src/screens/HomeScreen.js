@@ -122,6 +122,7 @@ const HomeScreen = ({ navigation }) => {
       loadParkedVehicles();
     } catch (error) {
       Alert.alert('Erro', error.response?.data?.error || 'Erro ao registrar entrada');
+      setPlate('');
     } finally {
       setLoading(false);
     }
@@ -134,7 +135,7 @@ const HomeScreen = ({ navigation }) => {
       const details = await vehicleService.getVehicleDetails(entryId);
       const entry = details?.entry || details?.data?.entry;
       const plate = entry?.vehicle?.plate;
-      const clientPhone = entry?.vehicle?.clientPhone || entry?.vehicle?.client_phone || entry?.vehicle?.client?.phone;
+      const clientPhone = entry?.vehicle?.clientPhone || entry?.vehicle?.client_phone;
       
       const totalPrice = mode === 'gratuito' ? 0 : undefined;
       await vehicleService.registerExit(entryId, '', totalPrice);

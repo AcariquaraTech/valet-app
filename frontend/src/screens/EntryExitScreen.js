@@ -45,6 +45,9 @@ const EntryExitScreen = ({ navigation }) => {
       setClientPhone('');
     } catch (error) {
       Alert.alert('Erro', error.response?.data?.error || error.response?.data?.message || 'Erro ao registrar entrada');
+      setPlate('');
+      setClientName('');
+      setClientPhone('');
     } finally {
       setLoading(false);
     }
