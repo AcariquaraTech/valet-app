@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, FlatList, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator, FlatList, ScrollView, TouchableOpacity, Platform, Modal } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { reportService } from '../services';
 import { Card, Button } from '../components/Common';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const ReportsScreen = ({ navigation }) => {
   console.log('[ReportsScreen] RENDERIZANDO COMPONENTE');
@@ -13,18 +14,17 @@ const ReportsScreen = ({ navigation }) => {
   const [error, setError] = useState(null);
   const [period, setPeriod] = useState('today');
   const [groupBy, setGroupBy] = useState('hour');
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [dailyDetail, setDailyDetail] = useState(null);
   
   console.log('[ReportsScreen] Estado:', { loading, hasDaily: !!daily, hasPeak: !!peak, hasVehicles: !!vehicles, error });
 
   useFocusEffect(
     React.useCallback(() => {
-      loadReports();
-    }, [period, groupBy])
+      loadReports({ showLoading: true });
+    }, [])
   );
-
-  useEffect(() => {
-    loadReports();
-  }, [period, groupBy]);
 
   const formatLocalDate = (date) => {
     const year = date.getFullYear();
@@ -33,24 +33,24 @@ const ReportsScreen = ({ navigation }) => {
     return `${year}-${month}-${day}`;
   };
 
-  const getRange = () => {
+  const getRange = (periodValue = period) => {
     const today = new Date();
     const endDate = formatLocalDate(today);
     let startDate = endDate;
 
-    if (period === '7d') {
+    if (periodValue === '7d') {
       const d = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
       startDate = formatLocalDate(d);
     }
-    if (period === '30d') {
+    if (periodValue === '30d') {
       const d = new Date(today.getTime() - 29 * 24 * 60 * 60 * 1000);
       startDate = formatLocalDate(d);
     }
-    if (period === 'month') {
+    if (periodValue === 'month') {
       const d = new Date(today.getFullYear(), today.getMonth(), 1);
       startDate = formatLocalDate(d);
     }
-    if (period === 'year') {
+    if (periodValue === 'year') {
       const d = new Date(today.getFullYear(), 0, 1);
       startDate = formatLocalDate(d);
     }
@@ -59,48 +59,53 @@ const ReportsScreen = ({ navigation }) => {
   };
 
   // Período independente para o gráfico de horários de pico
-  const getPeakRange = () => {
-    const today = new Date();
-    const endDate = formatLocalDate(today);
+  const getPeakRange = (groupByValue = groupBy) => {
+    // Se estamos visualizando um dia específico, usar essa data
+    const referenceDate = dailyDetail !== null ? selectedDate : new Date();
+    const endDate = formatLocalDate(referenceDate);
     let startDate = endDate;
 
-    // Se groupBy é 'hour', mostra últimas 24h (hoje)
-    if (groupBy === 'hour') {
+    // Se groupBy é 'hour', mostra última 24h (do dia selecionado ou hoje)
+    if (groupByValue === 'hour') {
       startDate = endDate;
     }
     // Se groupBy é 'day', mostra últimos 7 dias
-    else if (groupBy === 'day') {
-      const d = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
+    else if (groupByValue === 'day') {
+      const d = new Date(referenceDate.getTime() - 6 * 24 * 60 * 60 * 1000);
       startDate = formatLocalDate(d);
     }
     // Se groupBy é 'month', mostra último ano
-    else if (groupBy === 'month') {
-      const d = new Date(today.getFullYear(), 0, 1);
+    else if (groupByValue === 'month') {
+      const d = new Date(referenceDate.getFullYear(), 0, 1);
       startDate = formatLocalDate(d);
     }
     // Se groupBy é 'year', mostra últimos 5 anos
-    else if (groupBy === 'year') {
-      const d = new Date(today.getFullYear() - 4, 0, 1);
+    else if (groupByValue === 'year') {
+      const d = new Date(referenceDate.getFullYear() - 4, 0, 1);
       startDate = formatLocalDate(d);
     }
 
     return { startDate, endDate };
   };
 
-  const loadReports = async () => {
+  const loadReports = async ({ showLoading = true, periodOverride, groupByOverride } = {}) => {
     console.log('[ReportsScreen] Iniciando loadReports...');
-    setLoading(true);
+    if (showLoading) {
+      setLoading(true);
+    }
     setError(null);
     try {
+      const periodValue = periodOverride ?? period;
+      const groupByValue = groupByOverride ?? groupBy;
       const today = formatLocalDate(new Date());
-      const { startDate, endDate } = getRange();
-      const { startDate: peakStartDate, endDate: peakEndDate } = getPeakRange();
+      const { startDate, endDate } = getRange(periodValue);
+      const { startDate: peakStartDate, endDate: peakEndDate } = getPeakRange(groupByValue);
       console.log('[ReportsScreen] Range:', { 
         today, 
         daily: { startDate, endDate }, 
         peak: { startDate: peakStartDate, endDate: peakEndDate },
-        period, 
-        groupBy 
+        period: periodValue, 
+        groupBy: groupByValue 
       });
       
       console.log('[ReportsScreen] Carregando dailyData...');
@@ -115,9 +120,10 @@ const ReportsScreen = ({ navigation }) => {
       const peakData = await reportService.getPeakHours({
         startDate: peakStartDate,
         endDate: peakEndDate,
-        groupBy,
+        groupBy: groupByValue,
       });
-      console.log('[ReportsScreen] peakData:', peakData);
+      console.log('[ReportsScreen] peakData completo:', JSON.stringify(peakData, null, 2));
+      console.log('[ReportsScreen] peakData.data:', peakData?.data);
 
       const vehiclesData = await reportService.getVehiclesReport(startDate, endDate);
       console.log('[ReportsScreen] vehiclesData:', vehiclesData);
@@ -131,8 +137,69 @@ const ReportsScreen = ({ navigation }) => {
       console.error('[ReportsScreen] Erro detalhado:', e.message, e.response?.data);
       setError('Erro ao carregar relatórios: ' + (e.message || 'desconhecido'));
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
+  };
+
+  const openDatePicker = () => {
+    setShowDatePicker(true);
+  };
+
+  const loadDayDetail = async (date) => {
+    try {
+      const dateStr = formatLocalDate(date);
+      console.log('[ReportsScreen] Carregando detalhe do dia:', dateStr);
+      const data = await reportService.getDailyMovement({ date: dateStr });
+      setDailyDetail(data);
+      
+      // Carregar também o gráfico de horários de pico apenas para este dia
+      console.log('[ReportsScreen] Carregando peak hours para o dia:', dateStr);
+      const peakData = await reportService.getPeakHours({
+        startDate: dateStr,
+        endDate: dateStr,
+        groupBy: groupBy,
+      });
+      setPeak(peakData);
+    } catch (e) {
+      console.error('[ReportsScreen] Erro ao carregar detalhe do dia:', e);
+    }
+  };
+
+  const updatePeakHours = async (groupByValue) => {
+    try {
+      const dateStr = formatLocalDate(selectedDate);
+      console.log('[ReportsScreen] Atualizando peak hours para o dia:', dateStr, 'com groupBy:', groupByValue);
+      const peakData = await reportService.getPeakHours({
+        startDate: dateStr,
+        endDate: dateStr,
+        groupBy: groupByValue,
+      });
+      setPeak(peakData);
+      console.log('[ReportsScreen] Peak hours atualizado com sucesso!');
+    } catch (e) {
+      console.error('[ReportsScreen] Erro ao atualizar peak hours:', e);
+    }
+  };
+
+  const handleDateChange = (event, date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+      if (event?.type === 'set' && date) {
+        setSelectedDate(date);
+        loadDayDetail(date);
+      }
+      return;
+    }
+    if (date) {
+      setSelectedDate(date);
+    }
+  };
+
+  const handleDateConfirm = () => {
+    setShowDatePicker(false);
+    loadDayDetail(selectedDate);
   };
 
   const renderSummaryItem = (label, value) => (
@@ -274,7 +341,12 @@ const ReportsScreen = ({ navigation }) => {
               {['today', '7d', '30d', 'month', 'year'].map((key) => (
                 <TouchableOpacity
                   key={key}
-                  onPress={() => setPeriod(key)}
+                  onPress={() => {
+                    setDailyDetail(null);
+                    setGroupBy('hour');
+                    setPeriod(key);
+                    loadReports({ showLoading: false, periodOverride: key });
+                  }}
                   style={[styles.filterButton, period === key && styles.filterButtonActive]}
                 >
                   <Text style={[styles.filterButtonText, period === key && styles.filterButtonTextActive]}>
@@ -302,12 +374,85 @@ const ReportsScreen = ({ navigation }) => {
           </Card>
 
           <Card>
+            <Text style={styles.sectionTitle}>📆 Consultar Dia Específico</Text>
+            <TouchableOpacity 
+              onPress={openDatePicker}
+              style={styles.dateButton}
+            >
+              <Text style={styles.dateButtonText}>
+                Selecionar Data: {selectedDate.toLocaleDateString('pt-BR')}
+              </Text>
+            </TouchableOpacity>
+            
+            {showDatePicker && Platform.OS === 'android' && (
+              <DateTimePicker
+                value={selectedDate}
+                mode="date"
+                display="calendar"
+                onChange={handleDateChange}
+              />
+            )}
+
+            {showDatePicker && Platform.OS === 'ios' && (
+              <Modal
+                transparent
+                animationType="slide"
+                visible={showDatePicker}
+              >
+                <View style={styles.datePickerModal}>
+                  <View style={styles.datePickerHeader}>
+                    <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                      <Text style={styles.datePickerButtonText}>Cancelar</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.datePickerTitle}>Selecione a Data</Text>
+                    <TouchableOpacity onPress={handleDateConfirm}>
+                      <Text style={[styles.datePickerButtonText, { color: '#007AFF' }]}>OK</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <DateTimePicker
+                    value={selectedDate}
+                    mode="date"
+                    display="spinner"
+                    onChange={handleDateChange}
+                    locale="pt-BR"
+                  />
+                </View>
+              </Modal>
+            )}
+
+            {dailyDetail && (
+              <View style={styles.dayDetailContainer}>
+                <Text style={styles.dayDetailDate}>
+                  {selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                </Text>
+                <View style={styles.summaryGrid}>
+                  {renderSummaryItem('No Pátio', dailyDetail.summary?.currently_parked || 0)}
+                  {renderSummaryItem('Entraram', dailyDetail.summary?.total_entries || 0)}
+                  {renderSummaryItem('Saíram', dailyDetail.summary?.total_exits || 0)}
+                  {renderSummaryItem('Únicos', dailyDetail.summary?.unique_vehicles || 0)}
+                  {renderSummaryItem('Média (min)', dailyDetail.summary?.avg_parking_duration_minutes || 0)}
+                  {renderSummaryItem('Pico (hora)', dailyDetail.summary?.peak_hour || '-')}
+                </View>
+              </View>
+            )}
+          </Card>
+
+          <Card>
             <Text style={styles.sectionTitle}>⏰ Horários de Pico</Text>
             <View style={styles.filterRow}>
               {['hour', 'day', 'month', 'year'].map((key) => (
                 <TouchableOpacity
                   key={key}
-                  onPress={() => setGroupBy(key)}
+                  onPress={() => {
+                    setGroupBy(key);
+                    // Se estamos em modo "specific date", apenas atualiza os picos
+                    if (dailyDetail !== null) {
+                      updatePeakHours(key);
+                    } else {
+                      // Caso contrário, recarrega tudo com o novo groupBy
+                      loadReports({ showLoading: false, groupByOverride: key });
+                    }
+                  }}
                   style={[styles.filterButton, groupBy === key && styles.filterButtonActive]}
                 >
                   <Text style={[styles.filterButtonText, groupBy === key && styles.filterButtonTextActive]}>
@@ -608,6 +753,58 @@ const styles = StyleSheet.create({
     color: '#FF3B30',
     textAlign: 'center',
     fontWeight: '500',
+  },
+  dateButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  dateButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  datePickerModal: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  datePickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  datePickerTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  datePickerButtonText: {
+    fontSize: 14,
+    color: '#999',
+    fontWeight: '600',
+  },
+  dayDetailContainer: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  dayDetailDate: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 12,
+    textAlign: 'center',
+    textTransform: 'capitalize',
   },
 });
 

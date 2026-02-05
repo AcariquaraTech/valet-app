@@ -72,29 +72,36 @@ router.get('/daily-movement', authorize('admin'), async (req, res) => {
     
     // Determinar se é período ou apenas hoje
     // Se start_date === end_date === hoje, então é "Hoje" (não é período)
-    let start, end, date;
-    
-    if (req.query.start_date && req.query.end_date) {
+    let start, end, date, queryDate;
+
+    if (req.query.date) {
+      const requestedDate = safeDate(req.query.date, today) || today;
+      queryDate = requestedDate;
+      date = formatDateOnlyLocal(requestedDate);
+      start = startOfDay(requestedDate);
+      end = endOfDay(requestedDate);
+    } else if (req.query.start_date && req.query.end_date) {
       const startDateStr = req.query.start_date;
       const endDateStr = req.query.end_date;
       
       // Se start === end === hoje, usar apenas hoje (modo "Hoje")
       if (startDateStr === endDateStr && startDateStr === todayStr) {
-        const queryDate = today;
+        queryDate = today;
         date = toDateOnly(queryDate);
         start = startOfDay(queryDate);
         end = endOfDay(queryDate);
       } else {
         // Período customizado (7 dias, 30 dias, etc)
-          const startDateLocal = parseDateOnlyLocal(startDateStr) || new Date(req.query.start_date);
-          const endDateLocal = parseDateOnlyLocal(endDateStr) || new Date(req.query.end_date);
+        const startDateLocal = parseDateOnlyLocal(startDateStr) || new Date(req.query.start_date);
+        const endDateLocal = parseDateOnlyLocal(endDateStr) || new Date(req.query.end_date);
+        queryDate = startDateLocal;
         start = startOfDay(startDateLocal);
         end = endOfDay(endDateLocal);
         date = `${startDateStr} a ${endDateStr}`;
       }
     } else {
       // Apenas hoje (padrão, sem parâmetros)
-      const queryDate = today;
+      queryDate = today;
       date = toDateOnly(queryDate);
       start = startOfDay(queryDate);
       end = endOfDay(queryDate);
@@ -261,23 +268,11 @@ router.get('/peak-hours', authorize('admin'), async (req, res) => {
     
     if (req.query.start_date && req.query.end_date) {
       // Frontend enviou datas específicas (ex: período "today")
-      // Mas não podemos confiar na data do cliente, então calculamos baseado em "hoje"
+      // Usar as datas informadas no timezone local do servidor
       const start = parseDateOnlyLocal(req.query.start_date) || new Date(req.query.start_date);
       const end = parseDateOnlyLocal(req.query.end_date) || new Date(req.query.end_date);
-      
-      // Se start === end (mesmo dia), significa que quer ver apenas hoje
-        if (formatDateOnlyLocal(start) === formatDateOnlyLocal(end) &&
-          formatDateOnlyLocal(start) === formatDateOnlyLocal(today)) {
-        // Período "today" - usar apenas hoje no timezone do servidor
-        rangeStart = startOfDay(today);
-        rangeEnd = endOfDay(today);
-      } else {
-        // Período customizado - calcular os dias de diferença e aplicar no servidor
-        const diffDays = Math.ceil((end - start) / (24 * 60 * 60 * 1000)) + 1;
-        const defaultStart = new Date(today.getTime() - (diffDays - 1) * 24 * 60 * 60 * 1000);
-        rangeStart = startOfDay(defaultStart);
-        rangeEnd = endOfDay(today);
-      }
+      rangeStart = startOfDay(start);
+      rangeEnd = endOfDay(end);
     } else {
       // Usar o parâmetro days (padrão: 7)
       const defaultStart = new Date(today.getTime() - (days - 1) * 24 * 60 * 60 * 1000);
@@ -375,6 +370,12 @@ router.get('/peak-hours', authorize('admin'), async (req, res) => {
 
     // Combinar os dados
     const allLabels = new Set([...entriesMap.keys(), ...exitsMap.keys()]);
+    console.log('[reportRoutes] All labels before sorting:', Array.from(allLabels));
+    console.log('[reportRoutes] Sample entries that created labels:', entries.slice(0, 3).map(e => ({
+      time: e.entryTime?.toString(),
+      label: getLabel(e.entryTime, groupBy)
+    })));
+
     const map = new Map();
 
     allLabels.forEach((label) => {
@@ -389,7 +390,17 @@ router.get('/peak-hours', authorize('admin'), async (req, res) => {
       ...item,
       // Horário de pico considera apenas entradas
       total_movements: item.entries,
-    }));
+    })).sort((a, b) => {
+      // Ordenar os labels de forma correta
+      if (groupBy === 'hour') {
+        return parseInt(a.label) - parseInt(b.label);
+      } else if (groupBy === 'day' || groupBy === 'month') {
+        return a.label.localeCompare(b.label);
+      } else if (groupBy === 'year') {
+        return parseInt(a.label) - parseInt(b.label);
+      }
+      return 0;
+    });
 
     console.log('[reportRoutes] Map values before response:', Array.from(map.values()));
     console.log('[reportRoutes] Final data with total_movements:', data);
@@ -405,8 +416,8 @@ router.get('/peak-hours', authorize('admin'), async (req, res) => {
       : 0;
 
     res.json({
-      start_date: toDateOnly(rangeStart),
-      end_date: toDateOnly(rangeEnd),
+      start_date: formatDateOnlyLocal(rangeStart),
+      end_date: formatDateOnlyLocal(rangeEnd),
       group_by: groupBy,
       data,
       highest_peak: highest.label,
