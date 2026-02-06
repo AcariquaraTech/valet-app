@@ -444,10 +444,18 @@ router.get('/vehicles', authorize('admin'), async (req, res) => {
       });
     }
 
-    // Sempre usar data do servidor (não do cliente) para evitar problemas de timezone
+    // Usar start_date e end_date da query, ou hoje como fallback
+    const { start_date, end_date } = req.query;
     const today = new Date();
-    const rangeStart = startOfDay(today);
-    const rangeEnd = endOfDay(today);
+    
+    let rangeStart, rangeEnd;
+    if (start_date && end_date) {
+      rangeStart = startOfDay(new Date(start_date + 'T00:00:00'));
+      rangeEnd = endOfDay(new Date(end_date + 'T23:59:59'));
+    } else {
+      rangeStart = startOfDay(today);
+      rangeEnd = endOfDay(today);
+    }
 
     const entries = await prisma.vehicleEntry.findMany({
       where: {

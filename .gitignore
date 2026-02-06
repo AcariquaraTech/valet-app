@@ -25,3 +25,21 @@ venv/
 ENV/
 env.bak
 venv.bak
+
+# SQLite databases (local dev only)
+*.db
+*.db-journal
+backend/prisma/dev.db
+backend/prisma/dev.db-journal
+
+# Android build outputs
+frontend/android/build/
+frontend/android/app/build/
+frontend/android/.gradle/
+frontend/android/local.properties
+frontend/android/app/release/
+frontend/android/app/debug/
+
+# APK files (keep only in releases)
+*.apk
+*.aab

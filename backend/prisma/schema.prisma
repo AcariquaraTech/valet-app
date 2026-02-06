@@ -1,12 +1,12 @@
-// Prisma Schema - APP VALET (SQLite Compatible)
-// Simplified version for quick start
+// Prisma Schema - APP VALET (PostgreSQL)
+// Production-ready version
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

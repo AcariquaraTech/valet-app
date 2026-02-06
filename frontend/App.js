@@ -18,6 +18,7 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import EditProfileScreen from './src/screens/EditProfileScreen';
 import AccessKeyScreen from './src/screens/AccessKeyScreen';
 import UserManagementScreen from './src/screens/UserManagementScreen';
+import CameraScreen from './src/screens/CameraScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -140,6 +141,7 @@ function MainNavigator() {
       {isSignedIn ? (
         <>
           <Stack.Screen name="HomeTabs" component={TabNavigator} />
+          <Stack.Screen name="Camera" component={CameraScreen} />
         </>
       ) : (
         <Stack.Screen name="Login" component={LoginScreen} />

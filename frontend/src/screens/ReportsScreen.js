@@ -109,11 +109,11 @@ const ReportsScreen = ({ navigation }) => {
       });
       
       console.log('[ReportsScreen] Carregando dailyData...');
-      const dailyData = await reportService.getDailyMovement({
-        date: today,
-        startDate,
-        endDate,
-      });
+      // Se period === 'today', envia date=today. Caso contrário, envia startDate e endDate
+      const dailyParams = periodValue === 'today' 
+        ? { date: today }
+        : { startDate, endDate };
+      const dailyData = await reportService.getDailyMovement(dailyParams);
       console.log('[ReportsScreen] dailyData:', dailyData);
       
       console.log('[ReportsScreen] Carregando peakData...');

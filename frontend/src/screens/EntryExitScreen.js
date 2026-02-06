@@ -87,7 +87,11 @@ const EntryExitScreen = ({ navigation }) => {
           />
           <Button
             title="📸 Reconhecer Placa"
-            onPress={() => navigation.navigate('CameraScreen')}
+            onPress={() =>
+              navigation.navigate('Camera', {
+                onPlateDetected: (detectedPlate) => setPlate(detectedPlate),
+              })
+            }
             variant="secondary"
             style={{ marginBottom: 10 }}
           />

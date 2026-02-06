@@ -257,14 +257,29 @@ const HomeScreen = ({ navigation }) => {
         {/* Entrada de Veículo */}
         <Card>
           <Text style={styles.sectionTitle}>Entrada de Veículo</Text>
-          <TextInput
-            placeholder="Placa (ABC-1234)"
-            value={plate}
-            onChangeText={setPlate}
-            autoCapitalize="upper"
-            editable={!loading}
-            style={styles.input}
-          />
+          <View style={styles.plateInputContainer}>
+            <TextInput
+              placeholder="Placa (ABC-1234)"
+              value={plate}
+              onChangeText={setPlate}
+              autoCapitalize="characters"
+              editable={!loading}
+              style={[styles.input, styles.plateInput]}
+            />
+            <TouchableOpacity
+              style={styles.cameraButton}
+              onPress={() => {
+                navigation.navigate('Camera', {
+                  onPlateDetected: (detectedPlate) => {
+                    setPlate(detectedPlate);
+                  },
+                });
+              }}
+              disabled={loading}
+            >
+              <Text style={styles.cameraButtonText}>📷</Text>
+            </TouchableOpacity>
+          </View>
           <TextInput
             placeholder="Nome do Cliente (opcional)"
             value={clientName}
@@ -341,10 +356,6 @@ const HomeScreen = ({ navigation }) => {
 
         {/* Botões Adicionais */}
         <Card>
-          <Button
-            title="📷 Reconhecer Placa"
-            onPress={() => navigation.navigate('CameraScreen')}
-          />
           {user?.role === 'admin' && (
             <Button
               title="📊 Relatórios"
@@ -502,6 +513,28 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 14,
     marginBottom: 10,
+  },
+  plateInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  plateInput: {
+    flex: 1,
+    marginBottom: 0,
+    marginRight: 8,
+  },
+  cameraButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 44,
+  },
+  cameraButtonText: {
+    fontSize: 24,
   },
   vehicleItem: {
     flexDirection: 'row',

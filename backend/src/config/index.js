@@ -22,12 +22,6 @@ export default {
     phoneNumber: process.env.TWILIO_PHONE_NUMBER,
   },
   
-  // Google Cloud Vision
-  googleCloud: {
-    projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
-    keyPath: process.env.GOOGLE_CLOUD_KEY_PATH,
-  },
-  
   // CORS
   cors: {
     origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
