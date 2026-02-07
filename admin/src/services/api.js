@@ -1,7 +1,8 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:3000/api/admin';
-const CORE_API_URL = 'http://localhost:3000/api';
+// URL do backend - Railway em produção
+const API_BASE_URL = 'https://valet-app-production.up.railway.app/api/admin';
+const CORE_API_URL = 'https://valet-app-production.up.railway.app/api';
 
 // Recuperar token do localStorage
 const getAuthHeader = () => {

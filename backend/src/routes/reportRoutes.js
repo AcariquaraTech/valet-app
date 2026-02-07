@@ -194,18 +194,18 @@ router.get('/daily-movement', authorize('admin'), async (req, res) => {
 
       const [entriesByDay, exitsByDay] = await Promise.all([
         prisma.$queryRaw`
-          SELECT strftime('%Y-%m-%d', entryTime) as day, COUNT(*) as entries
+          SELECT DATE("entryTime")::text as day, COUNT(*) as entries
           FROM vehicle_entries
-          WHERE entryTime BETWEEN ${rangeStart} AND ${rangeEnd}
-          AND valetClientId = ${valetClientId}
+          WHERE "entryTime" BETWEEN ${rangeStart} AND ${rangeEnd}
+          AND "valetClientId" = ${valetClientId}
           GROUP BY day
           ORDER BY day ASC
         `,
         prisma.$queryRaw`
-          SELECT strftime('%Y-%m-%d', exitTime) as day, COUNT(*) as exits
+          SELECT DATE("exitTime")::text as day, COUNT(*) as exits
           FROM vehicle_entries
-          WHERE exitTime BETWEEN ${rangeStart} AND ${rangeEnd}
-          AND valetClientId = ${valetClientId}
+          WHERE "exitTime" BETWEEN ${rangeStart} AND ${rangeEnd}
+          AND "valetClientId" = ${valetClientId}
           GROUP BY day
           ORDER BY day ASC
         `,

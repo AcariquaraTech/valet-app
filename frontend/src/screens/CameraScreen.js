@@ -23,10 +23,7 @@ const CameraScreen = ({ navigation, route }) => {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       setHasPermission(status === 'granted');
       
-      if (status === 'granted') {
-        // Abre a câmera automaticamente ao entrar na tela
-        openCamera();
-      } else {
+      if (status !== 'granted') {
         Alert.alert(
           'Permissão Necessária',
           'Precisamos de acesso à câmera para escanear placas.',
@@ -183,8 +180,19 @@ const CameraScreen = ({ navigation, route }) => {
       )}
       {!capturedImage && !processing && (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.text}>Abrindo câmera...</Text>
+          <Text style={styles.text}>Pronto para escanear a placa</Text>
+          <TouchableOpacity
+            style={[styles.button, { marginTop: 20 }]}
+            onPress={openCamera}
+          >
+            <Text style={styles.buttonText}>📷 Abrir Câmera</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: '#666', marginTop: 10 }]}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.buttonText}>Cancelar</Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>
