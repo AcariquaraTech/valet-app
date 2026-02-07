@@ -1,13 +1,17 @@
-
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 // Permite setar função global de logout (será setada pelo App.js)
 let globalLogout = null;
 export const setGlobalLogout = (fn) => { globalLogout = fn; };
 
-// Em dispositivo físico, use o IP da máquina (rede local)
-const API_URL = 'http://192.168.0.5:3000/api';
+// URL do backend
+// Desenvolvimento: IP local ou localhost
+// Produção: URL do Railway
+const API_URL = __DEV__ 
+  ? (Platform.OS === 'android' ? 'http://10.0.2.2:3000/api' : 'http://192.168.0.5:3000/api')
+  : 'https://valet-app-production.up.railway.app/api';
 
 const apiClient = axios.create({
   baseURL: API_URL,
