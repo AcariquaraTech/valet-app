@@ -28,7 +28,9 @@ export default function VehicleReport({ dateRange, setDateRange }) {
         dateRange.startDate,
         dateRange.endDate
       );
-      setData(response.data || response);
+      const result = response.data || response;
+      // Backend retorna { vehicles: [...], total_vehicles: X }
+      setData(result.vehicles || result);
       setLastUpdate(new Date());
     } catch (err) {
       setError(err.response?.data?.error || 'Erro ao carregar dados');

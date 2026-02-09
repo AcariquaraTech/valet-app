@@ -29,7 +29,9 @@ export default function PeakHoursReport({ dateRange, setDateRange }) {
         dateRange.endDate,
         groupBy
       );
-      setData(response.data || response);
+      const result = response.data || response;
+      // Backend retorna { data: [...], start_date, end_date }
+      setData(result.data || result);
       setLastUpdate(new Date());
     } catch (err) {
       setError(err.response?.data?.error || 'Erro ao carregar dados');
@@ -149,7 +151,7 @@ export default function PeakHoursReport({ dateRange, setDateRange }) {
 
             <div className="card">
               <div className="card-label">⏰ Pico</div>
-              <div className="card-value">{stats.peakHour?.period || '-'}</div>
+              <div className="card-value">{stats.peakHour?.label || '-'}</div>
             </div>
           </div>
 
@@ -168,7 +170,7 @@ export default function PeakHoursReport({ dateRange, setDateRange }) {
                 {Array.isArray(data) && data.length > 0 ? (
                   data.map((item, index) => (
                     <tr key={index}>
-                      <td className="bold">{item.period || item.date || '-'}</td>
+                      <td className="bold">{item.label || '-'}</td>
                       <td>{item.entries || 0}</td>
                       <td>{item.exits || 0}</td>
                       <td>{(item.entries || 0) - (item.exits || 0)}</td>

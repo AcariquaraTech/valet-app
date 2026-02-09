@@ -24,7 +24,9 @@ export default function DailyMovementReport({ selectedDate, setSelectedDate }) {
       setLoading(true);
       setError('');
       const response = await reportService.getDailyMovement(selectedDate);
-      setData(response.data || response);
+      const result = response.data || response;
+      // Backend retorna { summary: {...}, date, history }
+      setData(result.summary || result);
       setLastUpdate(new Date());
     } catch (err) {
       setError(err.response?.data?.error || 'Erro ao carregar dados');
@@ -82,12 +84,12 @@ export default function DailyMovementReport({ selectedDate, setSelectedDate }) {
         <div className="data-cards">
           <div className="card">
             <div className="card-label">📥 Entradas</div>
-            <div className="card-value">{data.entries || 0}</div>
+            <div className="card-value">{data.total_entries || 0}</div>
           </div>
 
           <div className="card">
             <div className="card-label">📤 Saídas</div>
-            <div className="card-value">{data.exits || 0}</div>
+            <div className="card-value">{data.total_exits || 0}</div>
           </div>
 
           <div className="card">
@@ -115,15 +117,15 @@ export default function DailyMovementReport({ selectedDate, setSelectedDate }) {
             <tbody>
               <tr>
                 <td>Total de Entradas</td>
-                <td>{data.entries}</td>
+                <td>{data.total_entries || 0}</td>
               </tr>
               <tr>
                 <td>Total de Saídas</td>
-                <td>{data.exits}</td>
+                <td>{data.total_exits || 0}</td>
               </tr>
               <tr>
                 <td>Saldo (Veículos Estacionados)</td>
-                <td>{(data.entries || 0) - (data.exits || 0)}</td>
+                <td>{data.currently_parked || 0}</td>
               </tr>
               <tr>
                 <td>Veículos Únicos</td>
