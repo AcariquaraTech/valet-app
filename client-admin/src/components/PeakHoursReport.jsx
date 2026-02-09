@@ -25,9 +25,10 @@ export default function PeakHoursReport({ dateRange, setDateRange }) {
       setLoading(true);
       setError('');
       const response = await reportService.getPeakHours(
-        dateRange.startDate,
-        dateRange.endDate,
-        groupBy
+        undefined,
+        undefined,
+        groupBy,
+        true
       );
       const result = response.data || response;
       // Backend retorna { data: [...], start_date, end_date }
@@ -96,6 +97,7 @@ export default function PeakHoursReport({ dateRange, setDateRange }) {
             type="date"
             value={dateRange.startDate}
             onChange={(e) => handleDateRangeChange('startDate', e.target.value)}
+            disabled
           />
         </div>
 
@@ -105,6 +107,7 @@ export default function PeakHoursReport({ dateRange, setDateRange }) {
             type="date"
             value={dateRange.endDate}
             onChange={(e) => handleDateRangeChange('endDate', e.target.value)}
+            disabled
           />
         </div>
 
@@ -133,6 +136,8 @@ export default function PeakHoursReport({ dateRange, setDateRange }) {
           </div>
         )}
       </div>
+
+      <div className="chart-note">Grafico considera todo o historico do cliente.</div>
 
       {error && (
         <div className="error-box">

@@ -259,14 +259,42 @@ router.get('/peak-hours', authorize('admin'), async (req, res) => {
 
     const groupBy = req.query.group_by || 'hour';
     const days = parseInt(req.query.days, 10) || 7;
+    const allTime = req.query.all_time === '1' || req.query.all_time === 'true';
     // Sempre usar data do servidor (não do cliente) para evitar problemas de timezone
     const today = new Date();
     
     // Se o frontend enviou start_date e end_date, calcular o range baseado nisso
     // mas sempre usando as datas no timezone do servidor
     let rangeStart, rangeEnd;
-    
-    if (req.query.start_date && req.query.end_date) {
+
+    if (allTime) {
+      const [firstEntry, lastEntry] = await Promise.all([
+        prisma.vehicleEntry.findFirst({
+          where: { valetClientId },
+          orderBy: { entryTime: 'asc' },
+          select: { entryTime: true },
+        }),
+        prisma.vehicleEntry.findFirst({
+          where: { valetClientId },
+          orderBy: { entryTime: 'desc' },
+          select: { entryTime: true },
+        }),
+      ]);
+
+      if (!firstEntry || !lastEntry) {
+        return res.json({
+          start_date: null,
+          end_date: null,
+          group_by: groupBy,
+          data: [],
+          highest_peak: null,
+          avg_movements: 0,
+        });
+      }
+
+      rangeStart = startOfDay(firstEntry.entryTime);
+      rangeEnd = endOfDay(lastEntry.entryTime);
+    } else if (req.query.start_date && req.query.end_date) {
       // Frontend enviou datas específicas (ex: período "today")
       // Usar as datas informadas no timezone local do servidor
       const start = parseDateOnlyLocal(req.query.start_date) || new Date(req.query.start_date);
@@ -280,7 +308,7 @@ router.get('/peak-hours', authorize('admin'), async (req, res) => {
       rangeEnd = endOfDay(today);
     }
 
-    console.log('[PEAK HOURS] Query params:', { start_date: req.query.start_date, end_date: req.query.end_date, group_by: groupBy });
+    console.log('[PEAK HOURS] Query params:', { start_date: req.query.start_date, end_date: req.query.end_date, group_by: groupBy, all_time: allTime });
     console.log('[PEAK HOURS] Range:', { rangeStart: rangeStart.toISOString(), rangeEnd: rangeEnd.toISOString() });
     
     // Buscar todas as entradas e saídas no período

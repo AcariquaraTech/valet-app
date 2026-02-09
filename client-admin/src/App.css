@@ -331,6 +331,18 @@ body {
   align-items: center;
 }
 
+.report-filters input:disabled {
+  background: #f3f3f3;
+  color: #888;
+  cursor: not-allowed;
+}
+
+.chart-note {
+  font-size: 0.85rem;
+  color: #666;
+  margin: 0.5rem 0 1rem;
+}
+
 /* PEAK HOURS CHART */
 .chart-card {
   background: white;

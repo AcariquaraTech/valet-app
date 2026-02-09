@@ -223,9 +223,14 @@ export const reportService = {
   },
 
   // Relatório de picos de horário
-  getPeakHours: async (startDate, endDate, groupBy = 'hour') => {
+  getPeakHours: async (startDate, endDate, groupBy = 'hour', allTime = false) => {
     const response = await axios.get(`${CORE_API_URL}/reports/peak-hours`, {
-      params: { start_date: startDate, end_date: endDate, group_by: groupBy },
+      params: {
+        start_date: startDate,
+        end_date: endDate,
+        group_by: groupBy,
+        all_time: allTime ? '1' : undefined,
+      },
       headers: getAuthHeader(),
     });
     return response.data;
