@@ -198,7 +198,7 @@ router.get('/daily-movement', authorize('admin'), async (req, res) => {
           FROM vehicle_entries
           WHERE "entryTime" BETWEEN ${rangeStart} AND ${rangeEnd}
           AND "valetClientId" = ${valetClientId}
-          GROUP BY day
+          GROUP BY 1
           ORDER BY day ASC
         `,
         prisma.$queryRaw`
@@ -206,7 +206,7 @@ router.get('/daily-movement', authorize('admin'), async (req, res) => {
           FROM vehicle_entries
           WHERE "exitTime" BETWEEN ${rangeStart} AND ${rangeEnd}
           AND "valetClientId" = ${valetClientId}
-          GROUP BY day
+          GROUP BY 1
           ORDER BY day ASC
         `,
       ]);
