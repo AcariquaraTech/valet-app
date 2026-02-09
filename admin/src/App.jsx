@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Users, Key, BarChart3, LogOut } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
+import Reports from './pages/Reports';
 import './App.css';
 
 export default function App() {
@@ -8,6 +10,7 @@ export default function App() {
   const [loginData, setLoginData] = useState({ username: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [activePage, setActivePage] = useState('dashboard'); // 'dashboard', 'reports'
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
@@ -101,11 +104,34 @@ export default function App() {
         <div className="header-content">
           <h1>🅰️ Admin - APP Valet</h1>
           <button className="btn btn-secondary" onClick={handleLogout}>
-            Sair
+            <LogOut size={18} /> Sair
           </button>
         </div>
       </header>
-      <Dashboard />
+
+      <div className="app-container">
+        <nav className="app-nav">
+          <button
+            className={`nav-button ${activePage === 'dashboard' ? 'active' : ''}`}
+            onClick={() => setActivePage('dashboard')}
+          >
+            <Users size={20} />
+            <span>Gerenciar</span>
+          </button>
+          <button
+            className={`nav-button ${activePage === 'reports' ? 'active' : ''}`}
+            onClick={() => setActivePage('reports')}
+          >
+            <BarChart3 size={20} />
+            <span>Relatórios</span>
+          </button>
+        </nav>
+
+        <main className="app-main">
+          {activePage === 'dashboard' && <Dashboard />}
+          {activePage === 'reports' && <Reports />}
+        </main>
+      </div>
     </div>
   );
 }

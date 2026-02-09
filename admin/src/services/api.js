@@ -201,3 +201,42 @@ export const userService = {
     return response.data;
   },
 };
+
+// ========== REPORTS ==========
+export const reportService = {
+  // Relatório de movimento diário
+  getDailyMovement: async (date) => {
+    const response = await axios.get(`${CORE_API_URL}/reports/daily-movement`, {
+      params: { date },
+      headers: getAuthHeader(),
+    });
+    return response.data;
+  },
+
+  // Relatório de movimento por período
+  getMovementByPeriod: async (startDate, endDate) => {
+    const response = await axios.get(`${CORE_API_URL}/reports/daily-movement`, {
+      params: { start_date: startDate, end_date: endDate },
+      headers: getAuthHeader(),
+    });
+    return response.data;
+  },
+
+  // Relatório de picos de horário
+  getPeakHours: async (startDate, endDate, groupBy = 'hour') => {
+    const response = await axios.get(`${CORE_API_URL}/reports/peak-hours`, {
+      params: { start_date: startDate, end_date: endDate, group_by: groupBy },
+      headers: getAuthHeader(),
+    });
+    return response.data;
+  },
+
+  // Relatório de veículos
+  getVehicleReport: async (startDate, endDate) => {
+    const response = await axios.get(`${CORE_API_URL}/reports/vehicles`, {
+      params: { start_date: startDate, end_date: endDate },
+      headers: getAuthHeader(),
+    });
+    return response.data;
+  },
+};
