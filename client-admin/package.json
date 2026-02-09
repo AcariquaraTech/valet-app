@@ -1,30 +1,32 @@
 {
-  "name": "admin-estacionamento",
+  "name": "client-admin-estacionamento",
   "version": "1.0.0",
-  "description": "Admin Panel - Gerenciamento de Chaves de Acesso e Clientes",
+  "description": "Client Admin Portal - Dashboard de Relatórios do Estacionamento",
   "main": "index.js",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint src --ext .js,.jsx"
+    "lint": "eslint src --ext .js,.jsx",
+    "start": "npx serve -s dist -l 5173"
   },
   "dependencies": {
+    "axios": "^1.6.0",
+    "date-fns": "^2.30.0",
+    "lucide-react": "^0.292.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.20.0",
-    "axios": "^1.6.0",
-    "date-fns": "^2.30.0",
-    "lucide-react": "^0.292.0"
+    "serve": "^14.2.5"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.0",
-    "vite": "^5.0.0",
-    "tailwindcss": "^3.3.0",
-    "postcss": "^8.4.0",
     "autoprefixer": "^10.4.0",
     "eslint": "^8.54.0",
-    "eslint-plugin-react": "^7.33.0"
+    "eslint-plugin-react": "^7.33.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.3.0",
+    "vite": "^5.0.0"
   }
 }
