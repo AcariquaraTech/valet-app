@@ -52,7 +52,7 @@ export default function Reports() {
         )}
 
         {activeTab === 'vehicles' && (
-          <VehicleReport dateRange={dateRange} setDateRange={setDateRange} />
+          <VehicleReport />
         )}
       </div>
     </div>

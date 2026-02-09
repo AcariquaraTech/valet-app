@@ -537,6 +537,66 @@ router.get('/vehicles', authorize('admin'), async (req, res) => {
     res.status(500).json({
       error: 'Erro ao obter relatório de veículos',
       code: 'VEHICLES_REPORT_ERROR',
+
+      // GET /api/reports/parked-vehicles
+      router.get('/parked-vehicles', authorize('admin'), async (req, res) => {
+        try {
+          const valetClientId = req.user.valetClientId;
+    
+          if (!valetClientId) {
+            return res.status(403).json({
+              success: false,
+              message: 'Usuário não está associado a um valet',
+            });
+          }
+
+          const parkedVehicles = await prisma.vehicleEntry.findMany({
+            where: {
+              status: 'parked',
+              valetClientId,
+            },
+            include: {
+              vehicle: {
+                select: {
+                  plate: true,
+                  clientName: true,
+                  clientPhone: true,
+                  vehicleNumber: true,
+                },
+              },
+            },
+            orderBy: { entryTime: 'desc' },
+          });
+
+          const now = new Date();
+          const vehicles = parkedVehicles.map((entry) => {
+            const durationMinutes = Math.round((now.getTime() - entry.entryTime.getTime()) / 60000);
+            const hours = Math.floor(durationMinutes / 60);
+            const minutes = durationMinutes % 60;
+      
+            return {
+              id: entry.id,
+              plate: entry.vehicle?.plate || '-',
+              client_name: entry.vehicle?.clientName || '-',
+              client_phone: entry.vehicle?.clientPhone || '-',
+              entry_time: entry.entryTime,
+              duration_minutes: durationMinutes,
+              duration_formatted: `${hours}h ${minutes}m`,
+            };
+          });
+
+          res.json({
+            total_parked: vehicles.length,
+            vehicles,
+          });
+        } catch (error) {
+          res.status(500).json({
+            error: 'Erro ao obter veículos no pátio',
+            code: 'PARKED_VEHICLES_ERROR',
+            message: error.message,
+          });
+        }
+      });
       message: error.message,
     });
   }
