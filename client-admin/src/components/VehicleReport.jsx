@@ -9,6 +9,37 @@ export default function VehicleReport({ dateRange, setDateRange }) {
   const [searchPlate, setSearchPlate] = useState('');
   const [lastUpdate, setLastUpdate] = useState(null);
 
+  const normalizeVehicles = (items) => {
+    if (!Array.isArray(items)) return [];
+    const map = new Map();
+
+    items.forEach((entry) => {
+      const plate = entry.plate || '-';
+      const existing = map.get(plate) || {
+        plate,
+        entries: 0,
+        exits: 0,
+        total_duration: 0,
+        avg_duration: 0,
+      };
+
+      existing.entries += 1;
+
+      const durationMinutes = entry.duration_minutes;
+      if (entry.exit_time && Number.isFinite(durationMinutes)) {
+        existing.exits += 1;
+        existing.total_duration += durationMinutes / 60;
+      }
+
+      map.set(plate, existing);
+    });
+
+    return Array.from(map.values()).map((item) => ({
+      ...item,
+      avg_duration: item.exits ? item.total_duration / item.exits : 0,
+    }));
+  };
+
   useEffect(() => {
     loadVehicleData();
     
@@ -30,7 +61,8 @@ export default function VehicleReport({ dateRange, setDateRange }) {
       );
       const result = response.data || response;
       // Backend retorna { vehicles: [...], total_vehicles: X }
-      setData(result.vehicles || result);
+      const normalized = normalizeVehicles(result.vehicles || result);
+      setData(normalized);
       setLastUpdate(new Date());
     } catch (err) {
       setError(err.response?.data?.error || 'Erro ao carregar dados');
