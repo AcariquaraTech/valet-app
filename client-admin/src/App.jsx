@@ -7,15 +7,18 @@ import './App.css';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loginData, setLoginData] = useState({ username: '', password: '' });
+  const [loginData, setLoginData] = useState({ username: '', password: '', accessKeyCode: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activePage, setActivePage] = useState('dashboard'); // 'dashboard', 'reports'
+  const [clientInfo, setClientInfo] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
-    if (token) {
+    const accessKey = localStorage.getItem('accessKey');
+    if (token && accessKey) {
       setIsAuthenticated(true);
+      setClientInfo(JSON.parse(accessKey));
     }
   }, []);
 
@@ -31,6 +34,7 @@ export default function App() {
         body: JSON.stringify({
           nickname: loginData.username,
           password: loginData.password,
+          accessKeyCode: loginData.accessKeyCode,
         }),
       });
 
@@ -39,9 +43,16 @@ export default function App() {
       if (response.ok && data.data?.token) {
         localStorage.setItem('authToken', data.data.token);
         localStorage.setItem('user', JSON.stringify(data.data.user));
+        
+        // Salvar dados da chave de acesso
+        if (data.data.accessKey) {
+          localStorage.setItem('accessKey', JSON.stringify(data.data.accessKey));
+          setClientInfo(data.data.accessKey);
+        }
+        
         setIsAuthenticated(true);
       } else {
-        setError(data.error || 'Erro ao fazer login');
+        setError(data.message || data.error || 'Erro ao fazer login');
       }
     } catch (err) {
       setError('Erro de conexão: ' + err.message);
@@ -53,20 +64,37 @@ export default function App() {
   const handleLogout = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('user');
+    localStorage.removeItem('accessKey');
     setIsAuthenticated(false);
-    setLoginData({ username: '', password: '' });
+    setClientInfo(null);
+    setLoginData({ username: '', password: '', accessKeyCode: '' });
   };
 
   if (!isAuthenticated) {
     return (
       <div className="login-container">
         <div className="login-box">
-          <h1>🔐 Admin Panel</h1>
-          <p>Gerenciar Chaves de Acesso</p>
+          <h1>🔐 Portal do Cliente</h1>
+          <p>Acesse seu estacionamento</p>
 
           {error && <div className="error-message">{error}</div>}
 
           <form onSubmit={handleLogin}>
+            <div className="form-group">
+              <label>Código da Chave de Acesso</label>
+              <input
+                type="text"
+                value={loginData.accessKeyCode}
+                onChange={(e) => setLoginData({ ...loginData, accessKeyCode: e.target.value.toUpperCase() })}
+                placeholder="Ex: VALET-XXXXXXXXXXXX"
+                required
+                style={{ fontFamily: 'monospace', letterSpacing: '1px' }}
+              />
+              <small style={{ color: '#666', fontSize: '0.85rem' }}>
+                Use a mesma chave que você usa no aplicativo
+              </small>
+            </div>
+
             <div className="form-group">
               <label>Usuário</label>
               <input
@@ -102,7 +130,19 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <div className="header-content">
-          <h1>📊 Seu Estacionamento</h1>
+          <div className="header-left">
+            <h1>📊 {clientInfo?.companyName || clientInfo?.clientName || 'Seu Estacionamento'}</h1>
+            {clientInfo?.clientName && (
+              <p className="client-subtitle">
+                Cliente: {clientInfo.clientName}
+                {clientInfo.status && (
+                  <span className={`status-badge ${clientInfo.status}`}>
+                    {clientInfo.status === 'active' ? '🟢 Ativo' : '🔴 Inativo'}
+                  </span>
+                )}
+              </p>
+            )}
+          </div>
           <button className="btn btn-secondary" onClick={handleLogout}>
             <LogOut size={18} /> Sair
           </button>
