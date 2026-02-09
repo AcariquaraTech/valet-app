@@ -1,14 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { reportService } from '../services/api';
-import { Calendar, AlertCircle } from 'lucide-react';
+import { Calendar, AlertCircle, RefreshCw } from 'lucide-react';
 
 export default function DailyMovementReport({ selectedDate, setSelectedDate }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [lastUpdate, setLastUpdate] = useState(null);
 
   useEffect(() => {
     loadDailyData();
+    
+    // Auto-refresh a cada 30 segundos
+    const interval = setInterval(() => {
+      loadDailyData();
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, [selectedDate]);
 
   const loadDailyData = async () => {
@@ -17,6 +25,7 @@ export default function DailyMovementReport({ selectedDate, setSelectedDate }) {
       setError('');
       const response = await reportService.getDailyMovement(selectedDate);
       setData(response.data || response);
+      setLastUpdate(new Date());
     } catch (err) {
       setError(err.response?.data?.error || 'Erro ao carregar dados');
       console.error(err);
@@ -29,6 +38,10 @@ export default function DailyMovementReport({ selectedDate, setSelectedDate }) {
     setSelectedDate(e.target.value);
   };
 
+  const handleRefresh = () => {
+    loadDailyData();
+  };
+
   return (
     <div className="report-section">
       <div className="report-filters">
@@ -38,6 +51,22 @@ export default function DailyMovementReport({ selectedDate, setSelectedDate }) {
           </label>
           <input type="date" value={selectedDate} onChange={handleDateChange} />
         </div>
+        
+        <button 
+          className="refresh-btn" 
+          onClick={handleRefresh} 
+          disabled={loading}
+          title="Atualizar dados"
+        >
+          <RefreshCw size={16} className={loading ? 'spinning' : ''} />
+          Atualizar
+        </button>
+        
+        {lastUpdate && (
+          <div className="last-update">
+            Última atualização: {lastUpdate.toLocaleTimeString()}
+          </div>
+        )}
       </div>
 
       {error && (

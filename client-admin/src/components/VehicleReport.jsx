@@ -1,15 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { reportService } from '../services/api';
-import { Calendar, AlertCircle, Search } from 'lucide-react';
+import { Calendar, AlertCircle, Search, RefreshCw } from 'lucide-react';
 
 export default function VehicleReport({ dateRange, setDateRange }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [searchPlate, setSearchPlate] = useState('');
+  const [lastUpdate, setLastUpdate] = useState(null);
 
   useEffect(() => {
     loadVehicleData();
+    
+    // Auto-refresh a cada 45 segundos
+    const interval = setInterval(() => {
+      loadVehicleData();
+    }, 45000);
+    
+    return () => clearInterval(interval);
   }, [dateRange]);
 
   const loadVehicleData = async () => {
@@ -21,12 +29,17 @@ export default function VehicleReport({ dateRange, setDateRange }) {
         dateRange.endDate
       );
       setData(response.data || response);
+      setLastUpdate(new Date());
     } catch (err) {
       setError(err.response?.data?.error || 'Erro ao carregar dados');
       console.error(err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRefresh = () => {
+    loadVehicleData();
   };
 
   const handleDateRangeChange = (field, value) => {
@@ -84,6 +97,22 @@ export default function VehicleReport({ dateRange, setDateRange }) {
             Últimos 30 dias
           </button>
         </div>
+        
+        <button 
+          className="refresh-btn" 
+          onClick={handleRefresh} 
+          disabled={loading}
+          title="Atualizar dados"
+        >
+          <RefreshCw size={16} className={loading ? 'spinning' : ''} />
+          Atualizar
+        </button>
+        
+        {lastUpdate && (
+          <div className="last-update">
+            Última atualização: {lastUpdate.toLocaleTimeString()}
+          </div>
+        )}
       </div>
 
       <div className="search-box">

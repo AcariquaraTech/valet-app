@@ -1,15 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { reportService } from '../services/api';
-import { Calendar, AlertCircle } from 'lucide-react';
+import { Calendar, AlertCircle, RefreshCw } from 'lucide-react';
 
 export default function PeakHoursReport({ dateRange, setDateRange }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [groupBy, setGroupBy] = useState('hour');
+  const [lastUpdate, setLastUpdate] = useState(null);
 
   useEffect(() => {
     loadPeakData();
+    
+    // Auto-refresh a cada 60 segundos
+    const interval = setInterval(() => {
+      loadPeakData();
+    }, 60000);
+    
+    return () => clearInterval(interval);
   }, [dateRange, groupBy]);
 
   const loadPeakData = async () => {
@@ -22,12 +30,17 @@ export default function PeakHoursReport({ dateRange, setDateRange }) {
         groupBy
       );
       setData(response.data || response);
+      setLastUpdate(new Date());
     } catch (err) {
       setError(err.response?.data?.error || 'Erro ao carregar dados');
       console.error(err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRefresh = () => {
+    loadPeakData();
   };
 
   const handleDateRangeChange = (field, value) => {
@@ -43,15 +56,19 @@ export default function PeakHoursReport({ dateRange, setDateRange }) {
   };
 
   // Calcular estatísticas
-  const stats = Array.isArray(data)
+  const stats = Array.isArray(data) && data.length > 0
     ? {
         totalEntries: data.reduce((sum, item) => sum + (item.entries || 0), 0),
         totalExits: data.reduce((sum, item) => sum + (item.exits || 0), 0),
         peakHour: data.reduce((peak, item) =>
           (item.entries || 0) > (peak.entries || 0) ? item : peak
-        ),
+        , data[0]),
       }
-    : {};
+    : {
+        totalEntries: 0,
+        totalExits: 0,
+        peakHour: null,
+      };
 
   return (
     <div className="report-section">
@@ -90,6 +107,22 @@ export default function PeakHoursReport({ dateRange, setDateRange }) {
             Últimos 30 dias
           </button>
         </div>
+        
+        <button 
+          className="refresh-btn" 
+          onClick={handleRefresh} 
+          disabled={loading}
+          title="Atualizar dados"
+        >
+          <RefreshCw size={16} className={loading ? 'spinning' : ''} />
+          Atualizar
+        </button>
+        
+        {lastUpdate && (
+          <div className="last-update">
+            Última atualização: {lastUpdate.toLocaleTimeString()}
+          </div>
+        )}
       </div>
 
       {error && (
