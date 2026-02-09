@@ -72,6 +72,21 @@ export default function PeakHoursReport({ dateRange, setDateRange }) {
         peakHour: null,
       };
 
+  const chartData = Array.isArray(data)
+    ? data.map((item) => {
+        const entries = item.entries || 0;
+        const exits = item.exits || 0;
+        const total = Number.isFinite(item.total_movements)
+          ? item.total_movements
+          : entries + exits;
+        return {
+          label: item.label || '-',
+          total,
+        };
+      })
+    : [];
+  const maxTotal = chartData.reduce((max, item) => Math.max(max, item.total), 0);
+
   return (
     <div className="report-section">
       <div className="report-filters">
@@ -91,14 +106,6 @@ export default function PeakHoursReport({ dateRange, setDateRange }) {
             value={dateRange.endDate}
             onChange={(e) => handleDateRangeChange('endDate', e.target.value)}
           />
-        </div>
-
-        <div className="filter-group">
-          <label>Agrupar por</label>
-          <select value={groupBy} onChange={(e) => setGroupBy(e.target.value)}>
-            <option value="hour">Hora</option>
-            <option value="day">Dia</option>
-          </select>
         </div>
 
         <div className="quick-filters">
@@ -138,6 +145,57 @@ export default function PeakHoursReport({ dateRange, setDateRange }) {
 
       {!loading && (
         <>
+          <div className="chart-card">
+            <div className="chart-header">
+              <h3>Horários de Pico</h3>
+              <div className="chart-tabs">
+                <button
+                  className={`chart-tab ${groupBy === 'hour' ? 'active' : ''}`}
+                  onClick={() => setGroupBy('hour')}
+                >
+                  Hora
+                </button>
+                <button
+                  className={`chart-tab ${groupBy === 'day' ? 'active' : ''}`}
+                  onClick={() => setGroupBy('day')}
+                >
+                  Dia
+                </button>
+                <button
+                  className={`chart-tab ${groupBy === 'month' ? 'active' : ''}`}
+                  onClick={() => setGroupBy('month')}
+                >
+                  Mês
+                </button>
+                <button
+                  className={`chart-tab ${groupBy === 'year' ? 'active' : ''}`}
+                  onClick={() => setGroupBy('year')}
+                >
+                  Ano
+                </button>
+              </div>
+            </div>
+
+            {chartData.length > 0 ? (
+              <div className="bar-chart">
+                {chartData.map((item, index) => (
+                  <div key={`${item.label}-${index}`} className="bar-item">
+                    <div className="bar-label-top">{item.total}</div>
+                    <div className="bar">
+                      <div
+                        className="bar-fill"
+                        style={{ height: `${maxTotal ? (item.total / maxTotal) * 100 : 0}%` }}
+                      />
+                    </div>
+                    <div className="bar-label-bottom">{item.label}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="chart-empty">Nenhum dado disponível para o período selecionado</div>
+            )}
+          </div>
+
           <div className="data-cards">
             <div className="card">
               <div className="card-label">📥 Total Entradas</div>
