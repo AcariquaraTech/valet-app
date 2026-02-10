@@ -20,10 +20,16 @@ const CameraScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     (async () => {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
+      // Primeiro solicita permissão de câmera
+      const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
       
-      if (status !== 'granted') {
+      // Depois solicita permissão de acesso a mídia
+      const mediaPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      const hasAccess = cameraPermission.status === 'granted';
+      setHasPermission(hasAccess);
+      
+      if (!hasAccess) {
         Alert.alert(
           'Permissão Necessária',
           'Precisamos de acesso à câmera para escanear placas.',
@@ -35,6 +41,14 @@ const CameraScreen = ({ navigation, route }) => {
 
   const openCamera = async () => {
     try {
+      // Garante que as permissões estão concedidas
+      const permResult = await ImagePicker.requestCameraPermissionsAsync();
+      if (permResult.status !== 'granted') {
+        Alert.alert('Erro', 'Permissão de câmera foi negada.');
+        navigation.goBack();
+        return;
+      }
+
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: false,
@@ -122,7 +136,7 @@ const CameraScreen = ({ navigation, route }) => {
         error.response?.data?.error ||
         error.message ||
         'Erro desconhecido';
-      console.error('[CameraScreen] Erro ao processar foto:', errorMessage);
+      console.error('[CameraScreen] Erro ao processar foto:', errorMessage, error);
       Alert.alert(
         'Erro',
         'Erro ao processar imagem: ' + errorMessage,
