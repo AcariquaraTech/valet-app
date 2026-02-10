@@ -47,6 +47,11 @@ export default function VehicleReport() {
       )
     : [];
 
+  const formatTime = (date) => {
+    const d = new Date(date);
+    return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  };
+
   // Calcular estatísticas
   const stats = {
     totalParked: data.length,
@@ -56,11 +61,6 @@ export default function VehicleReport() {
     maxDuration: data.length > 0
       ? Math.max(...data.map(v => v.duration_minutes || 0))
       : 0,
-
-    const formatTime = (date) => {
-      const d = new Date(date);
-      return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    };
   };
 
   return (
