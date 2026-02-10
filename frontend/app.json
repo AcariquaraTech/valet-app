@@ -25,7 +25,8 @@
         "INTERNET",
         "ACCESS_NETWORK_STATE"
       ],
-      "useNextNotificationFormat": true
+      "useNextNotificationFormat": true,
+      "jsEngine": "hermes"
     },
     "web": {
       "favicon": "./assets/favicon.png"
