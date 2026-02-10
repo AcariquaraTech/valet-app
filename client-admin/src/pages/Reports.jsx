@@ -4,15 +4,16 @@ import { reportService } from '../services/api';
 import DailyMovementReport from '../components/DailyMovementReport';
 import PeakHoursReport from '../components/PeakHoursReport';
 import VehicleReport from '../components/VehicleReport';
+import { getTodayLocal, getDateDaysAgo } from '../utils/dateUtils';
 import './Reports.css';
 
 export default function Reports() {
   const [activeTab, setActiveTab] = useState('daily');
   const [dateRange, setDateRange] = useState({
-    startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0],
+    startDate: getDateDaysAgo(7),
+    endDate: getTodayLocal(),
   });
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(getTodayLocal());
 
   return (
     <div className="reports-container">

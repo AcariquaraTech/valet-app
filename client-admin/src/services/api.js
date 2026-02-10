@@ -239,15 +239,15 @@ export const reportService = {
   // Relatório de veículos
   getVehicleReport: async (startDate, endDate) => {
     const response = await axios.get(`${CORE_API_URL}/reports/vehicles`, {
-
-        // Veículos no pátio
-        getParkedVehicles: async () => {
-          const response = await axios.get(`${CORE_API_URL}/reports/parked-vehicles`, {
-            headers: getAuthHeader(),
-          });
-          return response.data;
-        },
       params: { start_date: startDate, end_date: endDate },
+      headers: getAuthHeader(),
+    });
+    return response.data;
+  },
+
+  // Veículos no pátio
+  getParkedVehicles: async () => {
+    const response = await axios.get(`${CORE_API_URL}/reports/parked-vehicles`, {
       headers: getAuthHeader(),
     });
     return response.data;
