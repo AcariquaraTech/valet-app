@@ -30,8 +30,9 @@ export default function VehicleReport() {
       setData(result.vehicles || []);
       setLastUpdate(new Date());
     } catch (err) {
-      setError(err.response?.data?.error || 'Erro ao carregar dados');
-      console.error(err);
+      const message = err.response?.data?.message || err.response?.data?.error || err.message || 'Erro ao carregar dados';
+      setError(message);
+      console.error('Parked vehicles error:', err.response?.status, err.response?.data || err);
     } finally {
       setLoading(false);
     }

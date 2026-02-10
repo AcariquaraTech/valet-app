@@ -543,7 +543,7 @@ router.get('/vehicles', authorize('admin'), async (req, res) => {
 });
 
 // GET /api/reports/parked-vehicles
-router.get('/parked-vehicles', authorize('admin'), async (req, res) => {
+router.get('/parked-vehicles', authorize('admin', 'client', 'operator'), async (req, res) => {
   try {
     const valetClientId = req.user.valetClientId;
 
