@@ -4,10 +4,15 @@ import axios from 'axios';
 
 const AccessKeyContext = createContext();
 
+// URL do backend em produção - Railway (HTTP para contornar problema SSL do React Native)
+const RAILWAY_URL = 'http://valet-app-production.up.railway.app/api';
+
 const accessKeyClient = axios.create({
-  baseURL: 'http://localhost:3000/api',
-  timeout: 10000,
+  baseURL: RAILWAY_URL,
+  timeout: 30000,
 });
+
+console.log('[AccessKeyContext] Inicializado com URL:', RAILWAY_URL);
 
 export const useAccessKey = () => {
   const context = useContext(AccessKeyContext);

@@ -48,7 +48,7 @@ export default function AccessKeyScreen({ navigation }) {
   const handleTestConnection = async () => {
     try {
       console.log('[AccessKeyScreen] Testando conexão com backend...');
-      const response = await fetch('http://127.0.0.1:3000/api/health');
+      const response = await fetch('http://valet-app-production.up.railway.app/api/health');
       const data = await response.json();
       console.log('[AccessKeyScreen] Resposta do health check:', data);
       Alert.alert('Sucesso', 'Backend está acessível!\n\n' + JSON.stringify(data, null, 2));
@@ -63,7 +63,11 @@ export default function AccessKeyScreen({ navigation }) {
       <View style={styles.content}>
         {/* Logo/Header */}
         <View style={styles.header}>
-          <Text style={styles.appName}>VALET</Text>
+          <Image 
+            source={require('../../assets/logo.png')} 
+            style={styles.logo}
+            resizeMode="contain"
+          />
           <Text style={styles.appSubtitle}>Sistema de Estacionamento</Text>
         </View>
 
@@ -120,7 +124,7 @@ export default function AccessKeyScreen({ navigation }) {
           <Text style={styles.infoTitle}>ℹ️ Não tem uma chave?</Text>
           <Text style={styles.infoText}>
             Entre em contato com o administrador do sistema para obter sua
-            chave de acesso.
+            chave de acesso. Telefone: (92) 98429-2032
           </Text>
         </View>
       </View>
@@ -128,7 +132,7 @@ export default function AccessKeyScreen({ navigation }) {
       {/* Footer */}
       <View style={styles.footer}>
         <Text style={styles.footerText}>
-          © 2026 VALET. Todos os direitos reservados.
+          © 2026 AcariquaraTech. Todos os direitos reservados.
         </Text>
       </View>
     </SafeAreaView>
@@ -149,11 +153,10 @@ const styles = StyleSheet.create({
     marginBottom: 40,
     alignItems: 'center',
   },
-  appName: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#2196F3',
-    marginBottom: 5,
+  logo: {
+    width: 200,
+    height: 120,
+    marginBottom: 20,
   },
   appSubtitle: {
     fontSize: 16,

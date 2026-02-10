@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Text } from 'react-native';
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { enableScreens } from 'react-native-screens';
 import { NavigationContainer } from '@react-navigation/native';
 import { navigationRef } from './src/utils/navigationRef';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -19,6 +20,8 @@ import EditProfileScreen from './src/screens/EditProfileScreen';
 import AccessKeyScreen from './src/screens/AccessKeyScreen';
 import UserManagementScreen from './src/screens/UserManagementScreen';
 import CameraScreen from './src/screens/CameraScreen';
+
+enableScreens();
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();

@@ -1,16 +1,7 @@
 apply plugin: "com.android.application"
 apply plugin: "com.facebook.react"
 
-// import com.android.build.OutputFile  // Deprecated in newer AGP versions
-
 def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
-def expoDebuggableVariants = ['debug']
-// Override `debuggableVariants` for expo-updates debugging
-if (System.getenv('EX_UPDATES_NATIVE_DEBUG') == "1") {
-  react {
-    expoDebuggableVariants = []
-  }
-}
 
 
 /**
@@ -18,10 +9,9 @@ if (System.getenv('EX_UPDATES_NATIVE_DEBUG') == "1") {
  * By default you don't need to apply any configuration, just uncomment the lines you need.
  */
 react {
-    entryFile = file(["node", "-e", "require('expo/scripts/resolveAppEntry')", projectRoot, "android", "absolute"].execute(null, rootDir).text.trim())
+    entryFile = file("../../index.js")
     reactNativeDir = new File(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim()).getParentFile().getAbsoluteFile()
     hermesCommand = new File(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim()).getParentFile().getAbsolutePath() + "/sdks/hermesc/%OS-BIN%/hermesc"
-    debuggableVariants = expoDebuggableVariants
 
     /* Folders */
     //   The root of your project, i.e. where "package.json" lives. Default is '..'
@@ -67,9 +57,8 @@ react {
     // hermesFlags = ["-O", "-output-source-map"]
 }
 
-// Override `hermesEnabled` by `expo.jsEngine`
 ext {
-  hermesEnabled = (findProperty('expo.jsEngine') ?: "hermes") == "hermes"
+    hermesEnabled = (findProperty('hermesEnabled') ?: "true").toBoolean()
 }
 
 /**
@@ -152,25 +141,6 @@ android {
         }
     }
 
-    // applicationVariants are e.g. debug, release
-    // Note: This section is disabled due to OutputFile being deprecated in AGP 7.0+
-    // Uncomment if needed with new AGP version support
-    /*
-    applicationVariants.all { variant ->
-        variant.outputs.each { output ->
-            // For each separate APK per architecture, set a unique version code as described here:
-            // https://developer.android.com/studio/build/configure-apk-splits.html
-            // Example: versionCode 1 will generate 1001 for armeabi-v7a, 1002 for x86, etc.
-            def versionCodes = ["armeabi-v7a": 1, "x86": 2, "arm64-v8a": 3, "x86_64": 4]
-            def abi = output.getFilter(OutputFile.ABI)
-            if (abi != null) {  // null for the universal-debug, universal-release variants
-                output.versionCodeOverride =
-                        defaultConfig.versionCode * 1000 + versionCodes.get(abi)
-            }
-
-        }
-    }
-    */
 }
 
 // Apply static values from `gradle.properties` to the `android.packagingOptions`
@@ -196,31 +166,6 @@ android {
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
-
-    def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true";
-    def isWebpEnabled = (findProperty('expo.webp.enabled') ?: "") == "true";
-    def isWebpAnimatedEnabled = (findProperty('expo.webp.animated') ?: "") == "true";
-    def frescoVersion = rootProject.ext.frescoVersion
-
-    // If your app supports Android versions before Ice Cream Sandwich (API level 14)
-    if (isGifEnabled || isWebpEnabled) {
-        implementation("com.facebook.fresco:fresco:${frescoVersion}")
-        implementation("com.facebook.fresco:imagepipeline-okhttp3:${frescoVersion}")
-    }
-
-    if (isGifEnabled) {
-        // For animated gif support
-        implementation("com.facebook.fresco:animated-gif:${frescoVersion}")
-    }
-
-    if (isWebpEnabled) {
-        // For webp support
-        implementation("com.facebook.fresco:webpsupport:${frescoVersion}")
-        if (isWebpAnimatedEnabled) {
-            // Animated webp support
-            implementation("com.facebook.fresco:animated-webp:${frescoVersion}")
-        }
-    }
 
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.0.0")
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,55 +8,36 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
+import { launchCamera } from 'react-native-image-picker';
 import apiClient from '../services/apiClient';
 
 const CameraScreen = ({ navigation, route }) => {
-  const [hasPermission, setHasPermission] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
 
   const { onPlateDetected } = route.params || {};
 
-  useEffect(() => {
-    (async () => {
-      // Primeiro solicita permissão de câmera
-      const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
-      
-      // Depois solicita permissão de acesso a mídia
-      const mediaPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
-      const hasAccess = cameraPermission.status === 'granted';
-      setHasPermission(hasAccess);
-      
-      if (!hasAccess) {
-        Alert.alert(
-          'Permissão Necessária',
-          'Precisamos de acesso à câmera para escanear placas.',
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
-        );
-      }
-    })();
-  }, []);
-
   const openCamera = async () => {
     try {
-      // Garante que as permissões estão concedidas
-      const permResult = await ImagePicker.requestCameraPermissionsAsync();
-      if (permResult.status !== 'granted') {
-        Alert.alert('Erro', 'Permissão de câmera foi negada.');
+      const result = await launchCamera({
+        mediaType: 'photo',
+        includeBase64: true,
+        quality: 0.8,
+        saveToPhotos: false,
+      });
+
+      if (result.didCancel) {
         navigation.goBack();
         return;
       }
 
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: false,
-        quality: 0.8,
-        base64: true,
-      });
+      if (result.errorCode) {
+        Alert.alert('Erro', result.errorMessage || 'Erro ao abrir a câmera.');
+        navigation.goBack();
+        return;
+      }
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
+      if (result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
         console.log('[CameraScreen] Foto capturada');
         setCapturedImage(asset.uri);
@@ -127,9 +108,6 @@ const CameraScreen = ({ navigation, route }) => {
           );
         }
         setProcessing(false);
-      } else {
-        // Usuário cancelou
-        navigation.goBack();
       }
     } catch (error) {
       const errorMessage =
@@ -155,29 +133,6 @@ const CameraScreen = ({ navigation, route }) => {
       setProcessing(false);
     }
   };
-
-  if (hasPermission === null) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.text}>Solicitando permissão...</Text>
-      </View>
-    );
-  }
-
-  if (hasPermission === false) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.text}>Sem acesso à câmera</Text>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.buttonText}>Voltar</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
