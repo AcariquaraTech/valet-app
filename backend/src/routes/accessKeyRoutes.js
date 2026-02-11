@@ -12,8 +12,12 @@ import {
 
 const router = express.Router();
 
+console.log('[accessKeyRoutes] Inicializando router...');
+
 // PUBLIC - Validar chave (primeira execução do app)
+console.log('[accessKeyRoutes] Registrando POST /validate');
 router.post('/validate', validateAccessKey);
+console.log('[accessKeyRoutes] POST /validate registrado!');
 
 // ADMIN - Gerar nova chave
 router.post('/generate', authenticateToken, authorize('admin'), generateAccessKey);

@@ -103,7 +103,9 @@ export const listAccessKeys = async (req, res) => {
  */
 export const validateAccessKey = async (req, res) => {
   try {
+    console.log('[validateAccessKey] ENTROU NA ROTA!', req.method, req.path);
     const { code, deviceId, appVersion, osVersion } = req.body;
+    console.log('[validateAccessKey] Recebeu code:', code);
 
     if (!code) {
       return res.status(400).json({
