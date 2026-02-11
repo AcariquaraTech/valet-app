@@ -6,8 +6,8 @@ import { Platform } from 'react-native';
 let globalLogout = null;
 export const setGlobalLogout = (fn) => { globalLogout = fn; };
 
-// URL do backend - Produção Railway (HTTP para contornar SSL do React Native)
-const RAILWAY_URL = 'http://valet-app-production.up.railway.app/api';
+// URL do backend - Produção Railway (HTTPS - Railway força HTTPS mesmo em desenvolvimento)
+const RAILWAY_URL = 'https://valet-app-production.up.railway.app/api';
 const API_URL = RAILWAY_URL;
 
 console.log('[apiClient] ✓ Iniciando com URL:', API_URL, 'Platform:', Platform.OS);

@@ -48,7 +48,7 @@ export default function AccessKeyScreen({ navigation }) {
   const handleTestConnection = async () => {
     try {
       console.log('[AccessKeyScreen] Testando conexão com backend...');
-      const response = await fetch('http://valet-app-production.up.railway.app/api/health');
+      const response = await fetch('https://valet-app-production.up.railway.app/api/health');
       const data = await response.json();
       console.log('[AccessKeyScreen] Resposta do health check:', data);
       Alert.alert('Sucesso', 'Backend está acessível!\n\n' + JSON.stringify(data, null, 2));
