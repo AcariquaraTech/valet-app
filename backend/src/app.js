@@ -55,11 +55,21 @@ app.get('/api/health', (req, res) => {
 app.get('/api/test', (req, res) => {
   res.json({ message: 'Backend foi deployado com sucesso!', timestamp: new Date().toISOString() });
 });
+
+// DEBUG: Rota temporária para validar acesso
+app.post('/api/access-keys/validate-debug', (req, res) => {
+  res.json({ message: 'DEBUG: Rota está registrada!', received: req.body });
+});
+
 app.use('/api/vehicles', authenticateToken, vehicleRoutes);
 app.use('/api/reports', authenticateToken, reportRoutes);
 app.use('/api/ocr', authenticateToken, ocrRoutes);
 app.use('/api/sms', authenticateToken, smsRoutes);
 app.use('/api/users', authenticateToken, userRoutes);
+
+// IMPORTANTE: Rota de validação de chave ANTES do middleware de autenticação
+app.post('/api/access-keys/validate', validateAccessKey);
+
 app.use('/api/access-keys', accessKeyRoutes);
 
 // Admin Routes (with authentication)
