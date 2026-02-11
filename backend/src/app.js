@@ -45,10 +45,16 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 
-// TESTE SUPER SIMPLES
-app.all('/api/access-keys/validate', (req, res, next) => {
-  console.log('[SUPER SIMPLES] Rota foi chamada!', req.method, req.url);
-  return res.status(200).json({ message: 'ROTA FUNCIONA!', method: req.method });
+// DEBUG: Rota de validação de chave - SIMPLES
+app.post('/api/access-keys/validate', async (req, res) => {
+  try {
+    console.log('[DIRECT ROUTE] /api/access-keys/validate POST chamado');
+    console.log('[DIRECT ROUTE] Body:', req.body);
+    return await validateAccessKey(req, res);
+  } catch (err) {
+    console.error('[DIRECT ROUTE] Erro:', err);
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/health', (req, res) => {
@@ -71,9 +77,10 @@ app.use('/api/reports', authenticateToken, reportRoutes);
 app.use('/api/ocr', authenticateToken, ocrRoutes);
 app.use('/api/sms', authenticateToken, smsRoutes);
 app.use('/api/users', authenticateToken, userRoutes);
-console.log('[APP.JS] Registrando accessKeyRoutes em /api/access-keys');
-app.use('/api/access-keys', accessKeyRoutes);
-console.log('[APP.JS] accessKeyRoutes registrado!');
+// COMENTADO: accessKeyRoutes já tem a rota /validate mapeada EXPLICITAMENTE acima
+// console.log('[APP.JS] Registrando accessKeyRoutes em /api/access-keys');
+// app.use('/api/access-keys', accessKeyRoutes);
+// console.log('[APP.JS] accessKeyRoutes registrado!');
 
 // Admin Routes (with authentication)
 app.use('/api/admin/clients', authenticateToken, clientRoutes);
