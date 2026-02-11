@@ -55,8 +55,6 @@ app.get('/api/health', (req, res) => {
 app.get('/api/test', (req, res) => {
   res.json({ message: 'Backend foi deployado com sucesso!', timestamp: new Date().toISOString() });
 });
-// Rota direta para validar chave (garante disponibilidade do endpoint)
-app.post('/api/access-keys/validate', validateAccessKey);
 app.use('/api/vehicles', authenticateToken, vehicleRoutes);
 app.use('/api/reports', authenticateToken, reportRoutes);
 app.use('/api/ocr', authenticateToken, ocrRoutes);
