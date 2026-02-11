@@ -28,12 +28,13 @@ export const Card = ({ children, style }) => {
 };
 
 import { TextInput as RNTextInput } from 'react-native';
-export const TextInput = ({ placeholder, value, onChangeText, secureTextEntry, style, children, ...props }) => {
+export const TextInput = ({ placeholder, value, onChangeText, secureTextEntry, inputKey, style, children, ...props }) => {
   return (
     <View style={styles.inputContainer}>
       {placeholder && <Text style={styles.inputPlaceholder}>{placeholder}</Text>}
       <View style={[styles.input, { flexDirection: 'row', alignItems: 'center', paddingRight: 8 }, style]}>
         <RNTextInput
+          key={inputKey}
           value={value}
           onChangeText={onChangeText}
           secureTextEntry={secureTextEntry}

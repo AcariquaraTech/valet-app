@@ -86,10 +86,15 @@ const LoginScreen = ({ navigation }) => {
             value={password}
             onChangeText={setPassword}
             secureTextEntry={!showPassword}
+            inputKey={showPassword ? 'password-visible' : 'password-hidden'}
             editable={!loading}
             autoCapitalize="none"
           >
-            <TouchableOpacity onPress={() => setShowPassword((v) => !v)} style={{ marginLeft: 8, padding: 4 }}>
+            <TouchableOpacity
+              onPress={() => setShowPassword((v) => !v)}
+              style={{ marginLeft: 8, padding: 4 }}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
               <Icon
                 name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                 size={24}
