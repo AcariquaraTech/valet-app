@@ -44,6 +44,13 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+
+// TESTE SUPER SIMPLES
+app.all('/api/access-keys/validate', (req, res, next) => {
+  console.log('[SUPER SIMPLES] Rota foi chamada!', req.method, req.url);
+  return res.status(200).json({ message: 'ROTA FUNCIONA!', method: req.method });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
