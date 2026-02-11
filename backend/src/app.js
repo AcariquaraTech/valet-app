@@ -12,7 +12,6 @@ import ocrRoutes from './routes/ocrRoutes.js';
 import smsRoutes from './routes/smsRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import accessKeyRoutes from './routes/accessKeyRoutes.js';
-import { validateAccessKey } from './controllers/accessKeyController.js';
 import clientRoutes from './routes/clientRoutes.js';
 import accessKeyAdminRoutes from './routes/accessKeyAdminRoutes.js';
 
@@ -45,18 +44,6 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 
-// DEBUG: Rota de validação de chave - SIMPLES
-app.post('/api/access-keys/validate', async (req, res) => {
-  try {
-    console.log('[DIRECT ROUTE] /api/access-keys/validate POST chamado');
-    console.log('[DIRECT ROUTE] Body:', req.body);
-    return await validateAccessKey(req, res);
-  } catch (err) {
-    console.error('[DIRECT ROUTE] Erro:', err);
-    return res.status(500).json({ error: err.message });
-  }
-});
-
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -77,10 +64,11 @@ app.use('/api/reports', authenticateToken, reportRoutes);
 app.use('/api/ocr', authenticateToken, ocrRoutes);
 app.use('/api/sms', authenticateToken, smsRoutes);
 app.use('/api/users', authenticateToken, userRoutes);
-// COMENTADO: accessKeyRoutes já tem a rota /validate mapeada EXPLICITAMENTE acima
-// console.log('[APP.JS] Registrando accessKeyRoutes em /api/access-keys');
-// app.use('/api/access-keys', accessKeyRoutes);
-// console.log('[APP.JS] accessKeyRoutes registrado!');
+
+// Access Keys Routes (includes /validate and admin endpoints)
+console.log('[APP.JS] Registrando accessKeyRoutes em /api/access-keys');
+app.use('/api/access-keys', accessKeyRoutes);
+console.log('[APP.JS] accessKeyRoutes registrado!');
 
 // Admin Routes (with authentication)
 app.use('/api/admin/clients', authenticateToken, clientRoutes);
