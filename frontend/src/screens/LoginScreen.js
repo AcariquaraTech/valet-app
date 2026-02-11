@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, Alert, Text, TouchableOpacity } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TextInput } from '../components/Common';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../store/AuthContext';
@@ -17,9 +18,31 @@ const LoginScreen = ({ navigation }) => {
   const { accessKey, clearAccessKey } = useAccessKey();
 
   useEffect(() => {
+    console.log('[LoginScreen] useEffect chamado com accessKey:', accessKey);
+    
+    // Prioridade 1: Usar accessKey do contexto
     if (accessKey) {
+      console.log('[LoginScreen] Usando accessKey do contexto:', accessKey);
       setAccessKeyCode(accessKey);
+      return;
     }
+
+    // Prioridade 2: Ler diretamente do AsyncStorage (fallback)
+    const loadAccessKeyFromStorage = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('accessKeyCode');
+        if (stored) {
+          console.log('[LoginScreen] Carregando accessKey do AsyncStorage:', stored);
+          setAccessKeyCode(stored);
+        } else {
+          console.log('[LoginScreen] Nenhuma accessKey encontrada em AsyncStorage');
+        }
+      } catch (err) {
+        console.error('[LoginScreen] Erro ao ler AsyncStorage:', err);
+      }
+    };
+
+    loadAccessKeyFromStorage();
   }, [accessKey]);
 
   const handleLogin = async () => {

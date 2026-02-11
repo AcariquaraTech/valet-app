@@ -106,14 +106,11 @@ export const AccessKeyProvider = ({ children }) => {
 
   const validateNewAccessKey = async (key) => {
     try {
-      console.log('[validateNewAccessKey-NEW2026] Iniciando validação com chave:', key);
-      console.log('[validateNewAccessKey-NEW2026] accessKeyClient tipo:', typeof accessKeyClient);
-      console.log('[validateNewAccessKey-NEW2026] accessKeyClient:', accessKeyClient);
+      console.log('[AccessKeyContext] Validando nova chave:', key);
       
       setLoading(true);
       setError(null);
 
-      console.log('[validateNewAccessKey-NEW2026] Fazendo POST para access-keys/validate');
       const response = await accessKeyClient.post('access-keys/validate', {
         code: key,
         deviceId: 'mobile-device',
@@ -121,22 +118,33 @@ export const AccessKeyProvider = ({ children }) => {
         osVersion: 'android',
       });
 
-      if (response.data.success) {
-        // Salvar chave localmente
-        await AsyncStorage.setItem('accessKeyCode', key);
-        await AsyncStorage.setItem(
-          'accessKeyData',
-          JSON.stringify(response.data.data)
-        );
-        await AsyncStorage.setItem(
-          'accessKeyLastValidation',
-          Date.now().toString()
-        );
+      console.log('[AccessKeyContext] Resposta de validação:', response.data);
 
+      if (response.data.success) {
+        console.log('[AccessKeyContext] Chave válida! Salvando em AsyncStorage...');
+        
+        // GARANTIR que TUDO é salvo ANTES de atualizar estado
+        await Promise.all([
+          AsyncStorage.setItem('accessKeyCode', key),
+          AsyncStorage.setItem(
+            'accessKeyData',
+            JSON.stringify(response.data.data)
+          ),
+          AsyncStorage.setItem(
+            'accessKeyLastValidation',
+            Date.now().toString()
+          ),
+        ]);
+
+        console.log('[AccessKeyContext] AsyncStorage atualizado com sucesso!');
+
+        // SÓ AGORA atualizar o estado React
         setAccessKey(key);
         setDaysRemaining(response.data.data.daysRemaining);
         setIsValidated(true);
         setLoading(false);
+
+        console.log('[AccessKeyContext] Estado React atualizado');
 
         return {
           success: true,
@@ -145,11 +153,12 @@ export const AccessKeyProvider = ({ children }) => {
         };
       }
     } catch (err) {
-      console.log('[validateNewAccessKey-NEW2026] ERRO CAPTURADO:', err);
-      console.log('[validateNewAccessKey-NEW2026] err.message:', err.message);
-      console.log('[validateNewAccessKey-NEW2026] err.code:', err.code);
-      console.log('[validateNewAccessKey-NEW2026] err.response:', err.response);
-      console.log('[validateNewAccessKey-NEW2026] Tipo do erro:', Object.prototype.toString.call(err));
+      console.error('[AccessKeyContext] Erro de validação:', {
+        message: err.message,
+        code: err.code,
+        status: err.response?.status,
+        data: err.response?.data,
+      });
       
       const errorCode = err.response?.data?.code;
       let errorMessage = err.response?.data?.error || 'Erro ao validar chave';
@@ -162,6 +171,10 @@ export const AccessKeyProvider = ({ children }) => {
         errorMessage =
           'Acesso revogado: ' +
           (err.response?.data?.reason || 'Sem motivo especificado');
+      } else if (err.code === 'ECONNREFUSED' || err.message.includes('Network Error')) {
+        errorMessage = 'Não conseguiu conectar ao servidor. Verifique sua conexão de internet.';
+      } else if (err.code === 'ENOTFOUND' || err.response?.status === 404) {
+        errorMessage = 'Servidor não encontrado. Há problema com a conexão.';
       }
 
       setError(errorMessage);
