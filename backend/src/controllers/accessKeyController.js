@@ -116,21 +116,35 @@ export const validateAccessKey = async (req, res) => {
     }
 
     // Buscar a chave
-    const accessKey = await prisma.accessKey.findUnique({
-      where: { code },
-    });
+    let accessKey;
+    try {
+      accessKey = await prisma.accessKey.findUnique({
+        where: { code },
+      });
+    } catch (findErr) {
+      console.error('[validateAccessKey] ERRO na busca de chave:', findErr.message);
+      return res.status(503).json({
+        success: false,
+        error: 'Serviço temporariamente indisponível. Tente novamente.',
+        code: 'SERVICE_UNAVAILABLE',
+      });
+    }
 
     if (!accessKey) {
-      // Log da tentativa falhada
-      await prisma.accessValidationLog.create({
-        data: {
-          accessKeyId: 'unknown',
-          deviceId,
-          status: 'invalid',
-          appVersion,
-          osVersion,
-        },
-      });
+      // Log da tentativa falhada - só se conseguir conectar ao banco
+      try {
+        await prisma.accessValidationLog.create({
+          data: {
+            accessKeyId: null, // Sem ID válido
+            deviceId,
+            status: 'invalid',
+            appVersion,
+            osVersion,
+          },
+        });
+      } catch (logErr) {
+        console.warn('[validateAccessKey] Erro ao criar log de falha:', logErr.message);
+      }
 
       return res.status(401).json({
         success: false,
@@ -180,24 +194,44 @@ export const validateAccessKey = async (req, res) => {
     }
 
     // Atualizar deviceId e lastValidatedAt
-    const updated = await prisma.accessKey.update({
-      where: { id: accessKey.id },
-      data: {
-        deviceId,
-        lastValidatedAt: new Date(),
-      },
-    });
+    let updated;
+    try {
+      updated = await prisma.accessKey.update({
+        where: { id: accessKey.id },
+        data: {
+          deviceId,
+          lastValidatedAt: new Date(),
+        },
+      });
+    } catch (updateErr) {
+      console.error('[validateAccessKey] Erro ao atualizar chave:', updateErr.message);
+      // Mesmo com erro, retorna sucesso se a validação passou
+      return res.json({
+        success: true,
+        message: 'Chave válida',
+        data: {
+          id: accessKey.id,
+          clientName: accessKey.clientName,
+          expiresAt: accessKey.expiresAt,
+          daysRemaining: Math.ceil(
+            (accessKey.expiresAt - new Date()) / (1000 * 60 * 60 * 24)
+          ),
+        },
+      });
+    }
 
-    // Log da validação bem-sucedida
-    await prisma.accessValidationLog.create({
-      data: {
-        accessKeyId: accessKey.id,
-        deviceId,
-        status: 'valid',
-        appVersion,
-        osVersion,
-      },
-    });
+    // Log da validação bem-sucedida - sem bloquear
+    setTimeout(() => {
+      prisma.accessValidationLog.create({
+        data: {
+          accessKeyId: accessKey.id,
+          deviceId,
+          status: 'valid',
+          appVersion,
+          osVersion,
+        },
+      }).catch(err => console.warn('[validateAccessKey] Erro ao criar log:', err.message));
+    }, 0);
 
     res.json({
       success: true,
@@ -212,9 +246,11 @@ export const validateAccessKey = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error('[validateAccessKey] ERRO CRÍTICO:', error.message);
     res.status(500).json({
       error: 'Erro ao validar chave',
       message: error.message,
+      code: 'VALIDATION_ERROR',
     });
   }
 };
