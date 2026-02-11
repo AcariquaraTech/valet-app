@@ -68,7 +68,7 @@ export const AccessKeyProvider = ({ children }) => {
 
   const validateAccessKeyWithServer = async (key) => {
     try {
-      const response = await accessKeyClient.post('/access-keys/validate', {
+      const response = await accessKeyClient.post('access-keys/validate', {
         code: key,
         deviceId: 'mobile-device',
         appVersion: '1.0.0',
@@ -113,8 +113,8 @@ export const AccessKeyProvider = ({ children }) => {
       setLoading(true);
       setError(null);
 
-      console.log('[validateNewAccessKey-NEW2026] Fazendo POST para /access-keys/validate');
-      const response = await accessKeyClient.post('/access-keys/validate', {
+      console.log('[validateNewAccessKey-NEW2026] Fazendo POST para access-keys/validate');
+      const response = await accessKeyClient.post('access-keys/validate', {
         code: key,
         deviceId: 'mobile-device',
         appVersion: '1.0.0',

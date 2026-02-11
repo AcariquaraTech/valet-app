@@ -54,7 +54,7 @@ const CameraScreen = ({ navigation, route }) => {
         console.log('[CameraScreen] Enviando para OCR...');
         
         // Enviar para OCR
-        const response = await apiClient.post('/ocr/recognize-plate', {
+        const response = await apiClient.post('ocr/recognize-plate', {
           image_base64: `data:image/jpeg;base64,${base64ForOcr}`,
         });
 
